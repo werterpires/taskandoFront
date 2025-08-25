@@ -1,1 +1,13 @@
-<p>organizations works!</p>
+
+<div class="organizations-container">
+  <h1>Organizações</h1>
+  
+  <button class="create-button" (click)="openCreateOrganization()">
+    Criar Organização
+  </button>
+
+  <app-create-organization 
+    *ngIf="showCreateOrganization"
+    (closeEmitter)="closeCreateOrganization()">
+  </app-create-organization>
+</div>

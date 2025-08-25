@@ -1,1 +1,35 @@
-<p>create-organization works!</p>
+
+<app-creating-form 
+  title="Nova Organização"
+  (closeEmitter)="close()"
+  (actionEmitter)="createOrganization()">
+  
+  <app-custom-input
+    label="Nome *"
+    type="text"
+    [formControl]="organizationForm.get('name')!"
+    placeholder="Digite o nome da organização">
+  </app-custom-input>
+
+  <app-custom-input
+    label="CNPJ"
+    type="text"
+    [formControl]="organizationForm.get('cnpj')!"
+    placeholder="Digite o CNPJ">
+  </app-custom-input>
+
+  <app-custom-input
+    label="Endereço"
+    type="text"
+    [formControl]="organizationForm.get('address')!"
+    placeholder="Digite o endereço">
+  </app-custom-input>
+
+  <app-custom-input
+    label="Telefone"
+    type="text"
+    [formControl]="organizationForm.get('phone')!"
+    placeholder="Digite o telefone">
+  </app-custom-input>
+
+</app-creating-form>
