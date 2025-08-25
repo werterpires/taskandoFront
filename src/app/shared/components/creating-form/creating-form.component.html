@@ -1,0 +1,15 @@
+<app-modal>
+  <h1>{{ title }}</h1>
+  <form>
+    <ng-content></ng-content>
+
+    <div id="buttons">
+      <button id="action-button" type="button" (click)="action()">
+        Salvar
+      </button>
+      <button id="cancel-button" type="button" (click)="cancel()">
+        Cancelar
+      </button>
+    </div>
+  </form>
+</app-modal>
