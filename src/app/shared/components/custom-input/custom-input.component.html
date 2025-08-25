@@ -1,0 +1,136 @@
+<div
+  class="input-section"
+  [ngStyle]="{
+    height: type !== 'area' && type !== 'editor' ? height : areaHeight
+  }"
+>
+  <div class="input-container">
+    <span *ngIf="outLabel">{{ outLabel }}</span>
+    <ng-container
+      *ngIf="
+        type === 'password' ||
+        type === 'email' ||
+        type === 'number' ||
+        type === 'text' ||
+        type === 'date'
+      "
+    >
+      <div></div>
+      <input
+        [id]="inputId"
+        [type]="type"
+        placeholder=" "
+        [value]="value"
+        [ngClass]="{ 'input-error': errorMessages.length > 0 }"
+        (input)="onInput($event); applyMask()"
+        (blur)="validate()"
+        [ngStyle]="{ width: width, height: height, padding: padding }"
+      />
+      <label
+        [ngClass]="{ 'label-error': errorMessages.length > 0 }"
+        class="input-label"
+        [for]="inputId"
+        >{{ label }}</label
+      >
+      <img
+        *ngIf="type === 'password'"
+        id="input-icon"
+        src="/icons/seePassword.svg"
+        alt="Ver senha"
+        (click)="type = 'text'; seeingPassword = true"
+      />
+
+      <img
+        *ngIf="seeingPassword"
+        id="input-icon"
+        src="/icons/unseePassword.svg"
+        alt="Ver senha"
+        (click)="type = 'password'; seeingPassword = false"
+      />
+    </ng-container>
+    <ng-container *ngIf="type === 'checkbox'">
+      <div class="checkbox-group">
+        <label class="checkbox-label">{{ label }}</label>
+        <div *ngFor="let option of options" class="checkbox-option">
+          <input
+            type="checkbox"
+            [id]="inputId + '-' + option.value"
+            [value]="option.value"
+            [checked]="isChecked(option.value)"
+            (change)="onCheckboxChange(option.value, $event)"
+          />
+          <label [for]="inputId + '-' + option.value">{{ option.label }}</label>
+        </div>
+      </div>
+    </ng-container>
+    <ng-container *ngIf="type === 'select'">
+      <select
+        [id]="inputId"
+        [ngClass]="{ 'input-error': errorMessages.length > 0 }"
+        (change)="onInput($event); validate()"
+        [value]="value"
+        [ngStyle]="{ width: width, height: height, padding: padding }"
+      >
+        <option value="">Selecione</option>
+        <option *ngFor="let option of options" [value]="option.value">
+          {{ option.label }}
+        </option>
+      </select>
+      <label
+        [ngClass]="{ 'label-error': errorMessages.length > 0 }"
+        class="input-label"
+        [for]="inputId"
+        >{{ label }}</label
+      >
+    </ng-container>
+    <ng-container *ngIf="type === 'area'">
+      <textarea
+        [id]="inputId"
+        [ngClass]="{ 'input-error': errorMessages.length > 0 }"
+        [value]="value"
+        (input)="onInput($event)"
+        (blur)="validate()"
+        placeholder=" "
+        [ngStyle]="{ height: areaHeight, width: areaWidth }"
+      ></textarea>
+      <label
+        [ngClass]="{ 'label-error': errorMessages.length > 0 }"
+        class="input-label"
+        [for]="inputId"
+        >{{ label }}</label
+      >
+    </ng-container>
+    <ng-container *ngIf="type === 'editor'">
+      <ngx-editor-menu [editor]="editor" [toolbar]="toolbar"></ngx-editor-menu>
+      <ngx-editor
+        [editor]="editor"
+        [ngModel]="value"
+        [disabled]="false"
+        [placeholder]="label"
+        [(ngModel)]="value"
+        (ngModelChange)="onInput($event); validate()"
+      ></ngx-editor>
+    </ng-container>
+    <ng-container *ngIf="type === 'multi'">
+      <div class="inputMulti">
+        <div class="divInput" (click)="showMulti = !showMulti">
+          {{ multiValues.join(', ') }}
+        </div>
+        <div class="divOptions" [ngClass]="{ hidden: !showMulti }">
+          <div
+            *ngFor="let option of options; let i = index"
+            class="option"
+            (click)="option.selected = !option.selected; onInput($event)"
+            [ngClass]="{ selected: option.selected }"
+          >
+            <span> {{ option.label }} </span>
+          </div>
+        </div>
+      </div>
+    </ng-container>
+  </div>
+
+  <div *ngIf="errorMessages.length > 0" class="error">
+    <p class="error-message">{{ errorMessages[0] }}</p>
+  </div>
+</div>

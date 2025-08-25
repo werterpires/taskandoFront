@@ -1,0 +1,54 @@
+<app-only-modal-base [title]="'Crie sua conta'">
+  <form>
+    <app-custom-input
+      [type]="'text'"
+      [label]="'Primeiro Nome'"
+      [customValidators]="[validators.required(), validators.hasXWords(1)]"
+      [(ngModel)]="userToLogon.firstName"
+      name="name"
+    >
+    </app-custom-input>
+
+    <app-custom-input
+      [type]="'text'"
+      [label]="'Segundo Nome'"
+      [customValidators]="[validators.required(), validators.hasXWords(1)]"
+      [(ngModel)]="userToLogon.lastName"
+      name="lastName"
+    >
+    </app-custom-input>
+
+    <app-custom-input
+      [type]="'email'"
+      [label]="'Digite seu email'"
+      [customValidators]="[validators.required(), validators.isEmail()]"
+      [(ngModel)]="logonDto.email"
+      name="email"
+    ></app-custom-input>
+
+    <app-custom-input
+      #passInput
+      [type]="'password'"
+      [label]="'Crie uma senha'"
+      [customValidators]="[
+        validators.required(),
+        validators.isStrongPassword()
+      ]"
+      [(ngModel)]="logonDto.password"
+      name="password"
+    ></app-custom-input>
+
+    <app-custom-input
+      [type]="'password'"
+      [label]="'Confirme a senha'"
+      [customValidators]="[
+        validators.required(),
+        validators.equalValues(passInput.value, 'Senha')
+      ]"
+    ></app-custom-input>
+
+    <button id="logon-button" type="button" (click)="preLogon()">
+      Cadastrar
+    </button>
+  </form>
+</app-only-modal-base>

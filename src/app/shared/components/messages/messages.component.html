@@ -1,0 +1,19 @@
+<ng-container *ngIf="message.show">
+  <div class="message-container" [ngClass]="message.type">
+    <div class="icone-container">
+      <img [src]="'/icons/' + message.type + '-icon.svg'" alt="icone" />
+    </div>
+    <div class="message-message-container">
+      <p class="message-title">{{ message.title }}</p>
+      <span
+        *ngFor="let description of message.description"
+        class="message-description"
+      >
+        {{ description }}
+      </span>
+    </div>
+    <button (click)="hide()" class="close-button">
+      <img src="/icons/close-icon.svg" alt="" />
+    </button>
+  </div>
+</ng-container>
