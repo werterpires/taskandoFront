@@ -1,0 +1,143 @@
+
+.input-container {
+  position: relative;
+  margin-bottom: var(--spacing-md);
+}
+
+.input-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.input-label {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-xs);
+  transition: color 0.2s ease;
+}
+
+.input-field {
+  width: 100%;
+  padding: var(--spacing-md);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-base);
+  color: var(--text-primary);
+  background-color: var(--bg-primary);
+  transition: all 0.3s ease;
+  outline: none;
+}
+
+.input-field::placeholder {
+  color: var(--text-light);
+}
+
+.input-field:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.input-field:hover:not(:focus) {
+  border-color: var(--text-secondary);
+}
+
+/* Input states */
+.input-field.error {
+  border-color: var(--error-color);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.input-field.success {
+  border-color: var(--success-color);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+.input-field:disabled {
+  background-color: var(--bg-secondary);
+  color: var(--text-light);
+  cursor: not-allowed;
+  border-color: var(--border-color);
+}
+
+/* Error messages */
+.error-messages {
+  margin-top: var(--spacing-xs);
+}
+
+.error-message {
+  color: var(--error-color);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  margin-top: var(--spacing-xs);
+}
+
+.error-message:first-child {
+  margin-top: 0;
+}
+
+.error-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+/* Input types specific styles */
+.input-field[type="password"] {
+  font-family: monospace;
+}
+
+.input-field[type="email"] {
+  text-transform: lowercase;
+}
+
+/* Focus states for labels */
+.input-wrapper:focus-within .input-label {
+  color: var(--border-focus);
+}
+
+.input-wrapper.error .input-label {
+  color: var(--error-color);
+}
+
+.input-wrapper.success .input-label {
+  color: var(--success-color);
+}
+
+/* Floating label animation (if needed) */
+.input-wrapper.floating .input-label {
+  position: absolute;
+  top: var(--spacing-md);
+  left: var(--spacing-md);
+  background: var(--bg-primary);
+  padding: 0 var(--spacing-xs);
+  pointer-events: none;
+  transition: all 0.2s ease;
+}
+
+.input-wrapper.floating .input-field:focus + .input-label,
+.input-wrapper.floating .input-field:not(:placeholder-shown) + .input-label {
+  top: -8px;
+  font-size: var(--font-size-xs);
+  color: var(--border-focus);
+}
+
+/* Responsive design */
+@media (max-width: 640px) {
+  .input-field {
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: var(--font-size-sm);
+  }
+  
+  .input-label {
+    font-size: var(--font-size-xs);
+  }
+  
+  .error-message {
+    font-size: 11px;
+  }
+}

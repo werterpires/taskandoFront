@@ -1,0 +1,106 @@
+
+.login-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-md);
+  background: linear-gradient(135deg, var(--primary-light) 0%, var(--bg-secondary) 100%);
+}
+
+.login-box {
+  background: var(--bg-primary);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  padding: var(--spacing-2xl);
+  width: 100%;
+  max-width: 400px;
+  border: 1px solid var(--border-color);
+}
+
+#app-name {
+  color: var(--primary-color);
+  font-size: var(--font-size-4xl);
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: var(--spacing-lg);
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+#login-title-space {
+  margin-bottom: var(--spacing-xl);
+}
+
+#login-title {
+  color: var(--text-primary);
+  font-size: var(--font-size-2xl);
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 0;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+#login-button {
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+  color: var(--text-white);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md) var(--spacing-lg);
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-sm);
+  margin-top: var(--spacing-md);
+}
+
+#login-button:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+  background: linear-gradient(135deg, var(--primary-hover), #3730a3);
+}
+
+#login-button:active {
+  transform: translateY(0);
+}
+
+#forgot-password {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  margin-top: var(--spacing-lg);
+  margin-bottom: 0;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+#forgot-password:hover {
+  color: var(--primary-color);
+}
+
+/* Responsive Design */
+@media (max-width: 640px) {
+  .login-container {
+    padding: var(--spacing-sm);
+  }
+  
+  .login-box {
+    padding: var(--spacing-xl);
+  }
+  
+  #app-name {
+    font-size: var(--font-size-3xl);
+  }
+  
+  #login-title {
+    font-size: var(--font-size-xl);
+  }
+}
