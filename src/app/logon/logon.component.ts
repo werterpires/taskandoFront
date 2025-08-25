@@ -95,4 +95,8 @@ export class LogonComponent {
       },
     });
   }
+
+  goToLogin() {
+    this.router.navigate(['/login']);
+  }
 }
