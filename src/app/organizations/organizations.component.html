@@ -1,10 +1,5 @@
-
 <div class="organizations-container">
   <h1>Organizações</h1>
-  
-  <button class="create-button" (click)="openCreateOrganization()">
-    Criar Organização
-  </button>
 
   <div class="table-container" *ngIf="!showCreateOrganization">
     <app-custom-table
@@ -13,12 +8,15 @@
       [del]="true"
       [seee]="true"
       (seeEmitter)="onSeeOrganization($event)"
-      (deleteEmitter)="onDeleteOrganization($event)">
+      (deleteEmitter)="onDeleteOrganization($event)"
+      (creatingEmitter)="openCreateOrganization()"
+    >
     </app-custom-table>
   </div>
 
-  <app-create-organization 
+  <app-create-organization
     *ngIf="showCreateOrganization"
-    (closeEmitter)="closeCreateOrganization()">
+    (closeEmitter)="closeCreateOrganization()"
+  >
   </app-create-organization>
 </div>

@@ -11,10 +11,16 @@ import { CustomInputComponent } from '../../shared/components/custom-input/custo
 import { OrganizationsService } from '../organizations.service';
 import { CreateOrganizationDto } from '../types';
 import { turnUndefinedIfEmpty } from '../../shared/services/utils/utils.functions';
+import { ModalComponent } from '../../shared/components/modal/modal.component';
 
 @Component({
   selector: 'app-create-organization',
-  imports: [CreatingFormComponent, CustomInputComponent, FormsModule],
+  imports: [
+    CreatingFormComponent,
+    CustomInputComponent,
+    FormsModule,
+    ModalComponent,
+  ],
   templateUrl: './create-organization.component.html',
   styleUrl: './create-organization.component.css',
 })

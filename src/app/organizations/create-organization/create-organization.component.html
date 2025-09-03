@@ -1,37 +1,39 @@
-<app-creating-form
-  title="Nova Organização"
-  (closeEmitter)="close()"
-  (actionEmitter)="createOrganization()"
->
-  <app-custom-input
-    label="Nome *"
-    type="text"
-    placeholder="Digite o nome da organização"
-    [(ngModel)]="createOrganizationDto.name"
+<app-modal>
+  <app-creating-form
+    title="Nova Organização"
+    (closeEmitter)="close()"
+    (actionEmitter)="createOrganization()"
   >
-  </app-custom-input>
+    <app-custom-input
+      label="Nome *"
+      type="text"
+      placeholder="Digite o nome da organização"
+      [(ngModel)]="createOrganizationDto.name"
+    >
+    </app-custom-input>
 
-  <app-custom-input
-    label="CNPJ"
-    type="text"
-    placeholder="Digite o CNPJ"
-    [(ngModel)]="createOrganizationDto.cnpj"
-  >
-  </app-custom-input>
+    <app-custom-input
+      label="CNPJ"
+      type="text"
+      placeholder="Digite o CNPJ"
+      [(ngModel)]="createOrganizationDto.cnpj"
+    >
+    </app-custom-input>
 
-  <app-custom-input
-    label="Endereço"
-    type="text"
-    placeholder="Digite o endereço"
-    [(ngModel)]="createOrganizationDto.address"
-  >
-  </app-custom-input>
+    <app-custom-input
+      label="Endereço"
+      type="text"
+      placeholder="Digite o endereço"
+      [(ngModel)]="createOrganizationDto.address"
+    >
+    </app-custom-input>
 
-  <app-custom-input
-    label="Telefone"
-    type="text"
-    placeholder="Digite o telefone"
-    [(ngModel)]="createOrganizationDto.phone"
-  >
-  </app-custom-input>
-</app-creating-form>
+    <app-custom-input
+      label="Telefone"
+      type="text"
+      placeholder="Digite o telefone"
+      [(ngModel)]="createOrganizationDto.phone"
+    >
+    </app-custom-input>
+  </app-creating-form>
+</app-modal>
