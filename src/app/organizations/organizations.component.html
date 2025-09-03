@@ -6,6 +6,17 @@
     Criar Organização
   </button>
 
+  <div class="table-container" *ngIf="!showCreateOrganization">
+    <app-custom-table
+      [tableData]="tableData"
+      [invite]="false"
+      [del]="true"
+      [seee]="true"
+      (seeEmitter)="onSeeOrganization($event)"
+      (deleteEmitter)="onDeleteOrganization($event)">
+    </app-custom-table>
+  </div>
+
   <app-create-organization 
     *ngIf="showCreateOrganization"
     (closeEmitter)="closeCreateOrganization()">

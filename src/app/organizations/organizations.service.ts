@@ -21,4 +21,12 @@ export class OrganizationsService {
       { headers: token }
     );
   }
+
+  getOrganizations(): Observable<Organization[]> {
+    const token = this.authService.makeHeadObjt();
+    return this.httpClient.get<Organization[]>(
+      'http://localhost:3000/organizations',
+      { headers: token }
+    );
+  }
 }
