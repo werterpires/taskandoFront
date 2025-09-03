@@ -1,0 +1,90 @@
+
+<div class="table-container" [style.width.%]="tableWidth">
+  <div class="table-header">
+    <button class="create-btn" (click)="create()">
+      Criar Novo
+    </button>
+  </div>
+
+  <div class="table-wrapper">
+    <table class="custom-table">
+      <thead>
+        <tr>
+          <th
+            *ngFor="let column of tableData.columns"
+            [style.width.px]="column.width"
+            (click)="sortByColumn(column.columnReference ? column.columnReference.toString() : column.name.toString())"
+            class="sortable-header"
+          >
+            {{ column.label }}
+            <span class="sort-icon">{{ getSortIcon(column) }}</span>
+          </th>
+          <th class="actions-header">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let item of tableData.data; let i = index" class="table-row">
+          <td *ngFor="let column of tableData.columns" class="table-cell">
+            {{ getColumnValue(item, column) }}
+          </td>
+          <td class="actions-cell">
+            <button
+              *ngIf="seee"
+              class="action-btn see-btn"
+              (click)="see(i)"
+              title="Ver detalhes"
+            >
+              👁️
+            </button>
+            <button
+              *ngIf="invite"
+              class="action-btn invite-btn"
+              (click)="inviteUser(i)"
+              title="Convidar"
+            >
+              📧
+            </button>
+            <button
+              *ngIf="del"
+              class="action-btn delete-btn"
+              (click)="delete(i)"
+              title="Excluir"
+            >
+              🗑️
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="pagination" *ngIf="paginator.pagesQuantity > 1">
+    <button
+      class="page-btn"
+      [disabled]="paginator.page <= 1"
+      (click)="pageNavigate(paginator.page - 1)"
+    >
+      ‹
+    </button>
+
+    <input
+      #pageInput
+      type="number"
+      class="page-input"
+      [value]="paginator.page"
+      (change)="changePage(pageInput)"
+      min="1"
+      [max]="paginator.pagesQuantity"
+    />
+
+    <span class="page-info">de {{ paginator.pagesQuantity }}</span>
+
+    <button
+      class="page-btn"
+      [disabled]="paginator.page >= paginator.pagesQuantity"
+      (click)="pageNavigate(paginator.page + 1)"
+    >
+      ›
+    </button>
+  </div>
+</div>
