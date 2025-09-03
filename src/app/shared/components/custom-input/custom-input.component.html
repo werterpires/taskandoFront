@@ -16,6 +16,12 @@
       "
     >
       <div></div>
+      <label
+        [ngClass]="{ 'label-error': errorMessages.length > 0 }"
+        class="input-label"
+        [for]="inputId"
+        >{{ label }}</label
+      >
       <input
         [id]="inputId"
         [type]="type"
@@ -26,12 +32,7 @@
         (blur)="validate()"
         [ngStyle]="{ width: width, height: height, padding: padding }"
       />
-      <label
-        [ngClass]="{ 'label-error': errorMessages.length > 0 }"
-        class="input-label"
-        [for]="inputId"
-        >{{ label }}</label
-      >
+
       <img
         *ngIf="type === 'password'"
         id="input-icon"
@@ -114,7 +115,7 @@
     <ng-container *ngIf="type === 'multi'">
       <div class="inputMulti">
         <div class="divInput" (click)="showMulti = !showMulti">
-          {{ multiValues.join(', ') }}
+          {{ multiValues.join(", ") }}
         </div>
         <div class="divOptions" [ngClass]="{ hidden: !showMulti }">
           <div

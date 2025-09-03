@@ -1,0 +1,30 @@
+form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xl);
+}
+
+#buttons {
+  display: flex;
+  justify-content: space-evenly;
+  gap: var(--spacing-md);
+}
+
+button {
+  flex-grow: 1;
+  padding: var(--spacing-sm);
+  border-radius: var(--radius-md);
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+#action-button {
+  background: var(--primary-color);
+  color: var(--text-white);
+}
+
+#cancel-button {
+  background: var(--error-color);
+  color: var(--text-white);
+}

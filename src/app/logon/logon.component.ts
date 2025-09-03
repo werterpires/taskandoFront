@@ -14,12 +14,7 @@ import { LoaderService } from '../shared/components/loader/loader.service';
 
 @Component({
   selector: 'app-logon',
-  imports: [
-    OnlyModalBaseComponent,
-    CustomInputComponent,
-    FormsModule,
-    CommonModule,
-  ],
+  imports: [CustomInputComponent, FormsModule, CommonModule],
   templateUrl: './logon.component.html',
   styleUrl: './logon.component.css',
 })
