@@ -83,7 +83,7 @@
     <div class="pagination-info">
       Página {{paginator.page}} de {{paginator.totalPages}}
       ({{(paginator.page - 1) * paginator.pageSize + 1}} - 
-      {{Math.min(paginator.page * paginator.pageSize, paginator.totalItems)}} de {{paginator.totalItems}})
+      {{currentPageEndItem}} de {{paginator.totalItems}})
     </div>
     
     <div class="pagination-controls">

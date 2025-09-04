@@ -41,6 +41,7 @@ export class CustomTableComponent<T> implements OnChanges {
   }
 
   pageSizeOptions = [5, 10, 25, 50, 100]
+  currentPageEndItem: number = 0
 
   constructor() {}
 
@@ -48,11 +49,13 @@ export class CustomTableComponent<T> implements OnChanges {
     if (changes['totalItems']) {
       this.paginator.totalItems = this.totalItems
       this.calculateTotalPages()
+      this.updatePaginationDisplay()
     }
   }
 
   calculateTotalPages() {
     this.paginator.totalPages = Math.ceil(this.paginator.totalItems / this.paginator.pageSize)
+    this.updatePaginationDisplay()
   }
 
   create() {
@@ -138,6 +141,14 @@ export class CustomTableComponent<T> implements OnChanges {
       direction: this.paginator.direction
     }
     this.paginationChangeEmitter.emit(backendPaginator)
+    this.updatePaginationDisplay()
+  }
+
+  updatePaginationDisplay() {
+    this.currentPageEndItem = Math.min(
+      this.paginator.page * this.paginator.pageSize,
+      this.paginator.totalItems
+    )
   }
 
   delete(index: number) {
