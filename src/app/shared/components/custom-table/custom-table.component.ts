@@ -152,18 +152,15 @@ export class CustomTableComponent<T> implements OnChanges {
   }
 
   delete(index: number) {
-    const actualIndex = (this.paginator.page - 1) * this.paginator.pageSize + index
-    this.deleteEmitter.emit(actualIndex)
+    this.deleteEmitter.emit(index)
   }
 
   see(index: number) {
-    const actualIndex = (this.paginator.page - 1) * this.paginator.pageSize + index
-    this.seeEmitter.emit(actualIndex)
+    this.seeEmitter.emit(index)
   }
 
   inviteUser(index: number) {
-    const actualIndex = (this.paginator.page - 1) * this.paginator.pageSize + index
-    this.inviteEmitter.emit(actualIndex)
+    this.inviteEmitter.emit(index)
   }
 
   getColumnValue(item: T, column: any): any {
