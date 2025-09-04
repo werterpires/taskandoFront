@@ -1,5 +1,6 @@
+
 <app-modal>
-  <div class="organization-details" *ngIf="organization">
+  <div class="organization-details" *ngIf="editableOrganization">
     <div class="header">
       <h2>Detalhes da Organização</h2>
       <button class="close-btn" (click)="close()">×</button>
@@ -8,37 +9,77 @@
     <div class="content">
       <div class="field-group">
         <label>Nome:</label>
-        <p>{{ organization.name }}</p>
+        <input 
+          type="text" 
+          class="editable-field" 
+          [(ngModel)]="editableOrganization.name"
+          (ngModelChange)="onFieldChange()"
+          placeholder="Digite o nome da organização"
+        />
       </div>
 
-      <div class="field-group" *ngIf="organization.cnpj">
+      <div class="field-group">
         <label>CNPJ:</label>
-        <p>{{ organization.cnpj }}</p>
+        <input 
+          type="text" 
+          class="editable-field" 
+          [(ngModel)]="editableOrganization.cnpj"
+          (ngModelChange)="onFieldChange()"
+          placeholder="Digite o CNPJ"
+        />
       </div>
 
-      <div class="field-group" *ngIf="organization.address">
+      <div class="field-group">
         <label>Endereço:</label>
-        <p>{{ organization.address }}</p>
+        <input 
+          type="text" 
+          class="editable-field" 
+          [(ngModel)]="editableOrganization.address"
+          (ngModelChange)="onFieldChange()"
+          placeholder="Digite o endereço"
+        />
       </div>
 
-      <div class="field-group" *ngIf="organization.phone">
+      <div class="field-group">
         <label>Telefone:</label>
-        <p>{{ organization.phone }}</p>
+        <input 
+          type="text" 
+          class="editable-field" 
+          [(ngModel)]="editableOrganization.phone"
+          (ngModelChange)="onFieldChange()"
+          placeholder="Digite o telefone"
+        />
       </div>
 
-      <div class="field-group" *ngIf="organization.owner">
+      <div class="field-group" *ngIf="editableOrganization.owner">
         <label>Proprietário:</label>
         <div class="owner-info">
           <p>
-            <strong>Nome:</strong> {{ organization.owner.firstName }}
-            {{ organization.owner.lastName }}
+            <strong>Nome:</strong> {{ editableOrganization.owner.firstName }}
+            {{ editableOrganization.owner.lastName }}
           </p>
-          <p><strong>Email:</strong> {{ organization.owner.email }}</p>
+          <p><strong>Email:</strong> {{ editableOrganization.owner.email }}</p>
         </div>
       </div>
     </div>
 
     <div class="actions">
+      <button 
+        *ngIf="hasChanges" 
+        class="btn-primary" 
+        (click)="saveChanges()"
+        [disabled]="isUpdating"
+      >
+        {{ isUpdating ? 'Salvando...' : 'Salvar' }}
+      </button>
+      <button 
+        *ngIf="hasChanges" 
+        class="btn-tertiary" 
+        (click)="cancelChanges()"
+        [disabled]="isUpdating"
+      >
+        Cancelar
+      </button>
       <button class="btn-secondary" (click)="close()">Fechar</button>
     </div>
   </div>

@@ -104,6 +104,16 @@ export class OrganizationsComponent implements OnInit {
     this.selectedOrganization = null;
   }
 
+  onOrganizationUpdated() {
+    // Recarrega a lista de organizações após atualização
+    this.loadOrganizations({
+      limit: 10,
+      offset: 0,
+      orderBy: 'name',
+      direction: 'ASC',
+    });
+  }
+
   onSeeOrganization(index: number) {
     const organization = this.organizations[index];
 

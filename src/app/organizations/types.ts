@@ -11,3 +11,7 @@ export interface Organization extends CreateOrganizationDto {
   orgId: string;
   owner?: User;
 }
+
+export interface UpdateOrganizationDto extends Partial<CreateOrganizationDto> {
+  orgId: number;
+}

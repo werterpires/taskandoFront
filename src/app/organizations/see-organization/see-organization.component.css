@@ -79,6 +79,82 @@
   margin-bottom: var(--spacing-sm);
 }
 
+.editable-field {
+  width: 100%;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  background-color: var(--background-primary);
+  transition: all 0.2s ease;
+}
+
+.editable-field:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.editable-field:hover {
+  border-color: var(--primary-color);
+}
+
+.actions {
+  display: flex;
+  gap: var(--spacing-md);
+  padding: var(--spacing-lg);
+  border-top: 1px solid var(--border-color);
+  justify-content: flex-end;
+}
+
+.btn-primary, .btn-secondary, .btn-tertiary {
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: var(--background-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+  background: var(--background-primary);
+  border-color: var(--primary-color);
+}
+
+.btn-tertiary {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.btn-tertiary:hover:not(:disabled) {
+  color: var(--text-primary);
+  border-color: var(--text-primary);
+}
+
 .owner-info p:last-child {
   margin-bottom: 0;
 }

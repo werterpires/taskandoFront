@@ -48,4 +48,13 @@ export class OrganizationsService {
       { headers: token }
     );
   }
+
+  updateOrganization(organization: UpdateOrganizationDto): Observable<Organization> {
+    const token = this.authService.makeHeadObjt();
+    return this.httpClient.put<Organization>(
+      'http://localhost:3000/organizations',
+      organization,
+      { headers: token }
+    );
+  }
 }

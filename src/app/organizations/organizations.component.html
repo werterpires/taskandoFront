@@ -27,6 +27,7 @@
     *ngIf="showSeeOrganization"
     [organization]="selectedOrganization"
     (closeEmitter)="closeSeeOrganization()"
+    (updateEmitter)="onOrganizationUpdated()"
   >
   </app-see-organization>
 </div>v>
