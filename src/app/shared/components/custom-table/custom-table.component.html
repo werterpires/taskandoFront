@@ -1,12 +1,28 @@
 
 <div class="table-container" [style.width.%]="tableWidth">
   <div class="table-header">
+    <div class="table-controls">
+      <select 
+        class="page-size-select" 
+        [value]="paginator.pageSize" 
+        (change)="changePageSize(+$any($event.target).value)">
+        <option *ngFor="let size of pageSizeOptions" [value]="size">
+          {{size}} por página
+        </option>
+      </select>
+      <span class="total-items">Total: {{paginator.totalItems}} itens</span>
+    </div>
     <button class="create-btn" (click)="create()">
       Criar Novo
     </button>
   </div>
 
   <div class="table-wrapper">
+    <div *ngIf="loading" class="loading-overlay">
+      <div class="spinner"></div>
+      <span>Carregando...</span>
+    </div>
+    
     <table class="custom-table">
       <thead>
         <tr>
@@ -54,37 +70,80 @@
             </button>
           </td>
         </tr>
+        <tr *ngIf="tableData.data.length === 0 && !loading">
+          <td [attr.colspan]="tableData.columns.length + 1" class="no-data">
+            Nenhum dado encontrado
+          </td>
+        </tr>
       </tbody>
     </table>
   </div>
 
-  <div class="pagination" *ngIf="paginator.pagesQuantity > 1">
-    <button
-      class="page-btn"
-      [disabled]="paginator.page <= 1"
-      (click)="pageNavigate(paginator.page - 1)"
-    >
-      ‹
-    </button>
+  <div class="pagination" *ngIf="paginator.totalPages > 1">
+    <div class="pagination-info">
+      Página {{paginator.page}} de {{paginator.totalPages}}
+      ({{(paginator.page - 1) * paginator.pageSize + 1}} - 
+      {{Math.min(paginator.page * paginator.pageSize, paginator.totalItems)}} de {{paginator.totalItems}})
+    </div>
+    
+    <div class="pagination-controls">
+      <button
+        class="page-btn"
+        [disabled]="paginator.page <= 1"
+        (click)="goToPage(1)"
+        title="Primeira página"
+      >
+        ⟪
+      </button>
+      
+      <button
+        class="page-btn"
+        [disabled]="paginator.page <= 1"
+        (click)="goToPage(paginator.page - 1)"
+        title="Página anterior"
+      >
+        ‹
+      </button>
 
-    <input
-      #pageInput
-      type="number"
-      class="page-input"
-      [value]="paginator.page"
-      (change)="changePage(pageInput)"
-      min="1"
-      [max]="paginator.pagesQuantity"
-    />
+      <button
+        *ngFor="let pageNum of getPageNumbers()"
+        class="page-btn"
+        [class.active]="pageNum === paginator.page"
+        (click)="goToPage(pageNum)"
+      >
+        {{pageNum}}
+      </button>
 
-    <span class="page-info">de {{ paginator.pagesQuantity }}</span>
+      <button
+        class="page-btn"
+        [disabled]="paginator.page >= paginator.totalPages"
+        (click)="goToPage(paginator.page + 1)"
+        title="Próxima página"
+      >
+        ›
+      </button>
+      
+      <button
+        class="page-btn"
+        [disabled]="paginator.page >= paginator.totalPages"
+        (click)="goToPage(paginator.totalPages)"
+        title="Última página"
+      >
+        ⟫
+      </button>
+    </div>
 
-    <button
-      class="page-btn"
-      [disabled]="paginator.page >= paginator.pagesQuantity"
-      (click)="pageNavigate(paginator.page + 1)"
-    >
-      ›
-    </button>
+    <div class="page-jump">
+      <span>Ir para:</span>
+      <input
+        #pageInput
+        type="number"
+        class="page-input"
+        [value]="paginator.page"
+        (change)="changePage(pageInput)"
+        min="1"
+        [max]="paginator.totalPages"
+      />
+    </div>
   </div>
 </div>

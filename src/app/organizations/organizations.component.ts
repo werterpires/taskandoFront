@@ -1,3 +1,4 @@
+
 import { Component, OnInit } from '@angular/core';
 import { CreateOrganizationComponent } from './create-organization/create-organization.component';
 import { CommonModule } from '@angular/common';
@@ -5,6 +6,7 @@ import { CustomTableComponent } from '../shared/components/custom-table/custom-t
 import { TableData } from '../shared/components/custom-table/types';
 import { Organization } from './types';
 import { OrganizationsService } from './organizations.service';
+import { Paginator } from '../shared/types/api';
 
 @Component({
   selector: 'app-organizations',
@@ -15,6 +17,8 @@ import { OrganizationsService } from './organizations.service';
 export class OrganizationsComponent implements OnInit {
   showCreateOrganization = false;
   organizations: Organization[] = [];
+  totalItems = 0;
+  loading = false;
   
   tableData: TableData<Organization> = {
     data: [],
@@ -22,22 +26,22 @@ export class OrganizationsComponent implements OnInit {
       {
         name: 'name',
         label: 'Nome',
-        width: 30
+        width: 200
       },
       {
         name: 'cnpj',
         label: 'CNPJ',
-        width: 20
+        width: 150
       },
       {
         name: 'address',
         label: 'Endereço',
-        width: 30
+        width: 250
       },
       {
         name: 'phone',
         label: 'Telefone',
-        width: 20
+        width: 150
       }
     ]
   };
@@ -45,19 +49,32 @@ export class OrganizationsComponent implements OnInit {
   constructor(private readonly organizationsService: OrganizationsService) {}
 
   ngOnInit() {
-    this.loadOrganizations();
+    this.loadOrganizations({
+      limit: 10,
+      offset: 0,
+      orderBy: 'name',
+      direction: 'ASC'
+    });
   }
 
-  loadOrganizations() {
-    this.organizationsService.getOrganizations().subscribe({
-      next: (organizations) => {
-        this.organizations = organizations;
-        this.tableData.data = organizations;
+  loadOrganizations(paginator: Paginator) {
+    this.loading = true;
+    this.organizationsService.getOrganizations(paginator).subscribe({
+      next: (response) => {
+        this.organizations = response.itens;
+        this.totalItems = response.quantity;
+        this.tableData.data = response.itens;
+        this.loading = false;
       },
       error: (error) => {
         console.error('Erro ao carregar organizações:', error);
+        this.loading = false;
       }
     });
+  }
+
+  onPaginationChange(paginator: Paginator) {
+    this.loadOrganizations(paginator);
   }
 
   openCreateOrganization() {
@@ -66,7 +83,13 @@ export class OrganizationsComponent implements OnInit {
 
   closeCreateOrganization() {
     this.showCreateOrganization = false;
-    this.loadOrganizations(); // Recarrega a lista após criar uma nova organização
+    // Recarrega a primeira página após criar uma nova organização
+    this.loadOrganizations({
+      limit: 10,
+      offset: 0,
+      orderBy: 'name',
+      direction: 'ASC'
+    });
   }
 
   onSeeOrganization(index: number) {

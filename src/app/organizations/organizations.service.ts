@@ -1,32 +1,43 @@
-import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { CreateOrganizationDto, Organization } from './types';
 import { AuthStateService } from '../shared/services/auth/auth-state.service';
+import { CreateOrganizationDto, Organization } from './types';
+import { Paginator, Response } from '../shared/types/api';
 
-@Injectable({ providedIn: 'root' })
+@Injectable({
+  providedIn: 'root',
+})
 export class OrganizationsService {
   constructor(
     private readonly httpClient: HttpClient,
     private readonly authService: AuthStateService
   ) {}
 
-  createOrganization(
-    createOrganizationDto: CreateOrganizationDto
-  ): Observable<Organization> {
+  createOrganization(organization: CreateOrganizationDto): Observable<any> {
     const token = this.authService.makeHeadObjt();
-    return this.httpClient.post<Organization>(
+    return this.httpClient.post(
       'http://localhost:3000/organizations',
-      createOrganizationDto,
+      organization,
       { headers: token }
     );
   }
 
-  getOrganizations(): Observable<Organization[]> {
+  getOrganizations(paginator: Paginator): Observable<Response<Organization>> {
     const token = this.authService.makeHeadObjt();
-    return this.httpClient.get<Organization[]>(
+
+    let params = new HttpParams()
+      .set('limit', paginator.limit.toString())
+      .set('offset', paginator.offset.toString())
+      .set('direction', paginator.direction);
+
+    if (paginator.orderBy) {
+      params = params.set('orderBy', paginator.orderBy);
+    }
+
+    return this.httpClient.get<Response<Organization>>(
       'http://localhost:3000/organizations',
-      { headers: token }
+      { headers: token, params }
     );
   }
 }

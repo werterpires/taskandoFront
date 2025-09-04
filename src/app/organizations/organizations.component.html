@@ -4,9 +4,12 @@
   <div class="table-container" *ngIf="!showCreateOrganization">
     <app-custom-table
       [tableData]="tableData"
+      [totalItems]="totalItems"
+      [loading]="loading"
       [invite]="false"
       [del]="true"
       [seee]="true"
+      (paginationChangeEmitter)="onPaginationChange($event)"
       (seeEmitter)="onSeeOrganization($event)"
       (deleteEmitter)="onDeleteOrganization($event)"
       (creatingEmitter)="openCreateOrganization()"

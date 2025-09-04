@@ -20,9 +20,11 @@ export interface TableData<T> {
   }[]
 }
 
-export interface Paginator {
-  column: string
-  direction: Direction
+export interface TablePaginator {
   page: number
-  pagesQuantity: number
+  pageSize: number
+  totalItems: number
+  totalPages: number
+  orderBy: string
+  direction: Direction
 }
