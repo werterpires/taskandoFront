@@ -1,4 +1,3 @@
-
 import { Component, OnInit } from '@angular/core';
 import { CreateOrganizationComponent } from './create-organization/create-organization.component';
 import { SeeOrganizationComponent } from './see-organization/see-organization.component';
@@ -11,7 +10,12 @@ import { Paginator } from '../shared/types/api';
 
 @Component({
   selector: 'app-organizations',
-  imports: [CreateOrganizationComponent, SeeOrganizationComponent, CommonModule, CustomTableComponent],
+  imports: [
+    CreateOrganizationComponent,
+    SeeOrganizationComponent,
+    CommonModule,
+    CustomTableComponent,
+  ],
   templateUrl: './organizations.component.html',
   styleUrl: './organizations.component.css',
 })
@@ -22,31 +26,31 @@ export class OrganizationsComponent implements OnInit {
   organizations: Organization[] = [];
   totalItems = 0;
   loading = false;
-  
+
   tableData: TableData<Organization> = {
     data: [],
     columns: [
       {
         name: 'name',
         label: 'Nome',
-        width: 200
+        width: 200,
       },
       {
         name: 'cnpj',
         label: 'CNPJ',
-        width: 150
+        width: 150,
       },
       {
         name: 'address',
         label: 'Endereço',
-        width: 250
+        width: 250,
       },
       {
         name: 'phone',
         label: 'Telefone',
-        width: 150
-      }
-    ]
+        width: 150,
+      },
+    ],
   };
 
   constructor(private readonly organizationsService: OrganizationsService) {}
@@ -56,7 +60,7 @@ export class OrganizationsComponent implements OnInit {
       limit: 10,
       offset: 0,
       orderBy: 'name',
-      direction: 'ASC'
+      direction: 'ASC',
     });
   }
 
@@ -72,7 +76,7 @@ export class OrganizationsComponent implements OnInit {
       error: (error) => {
         console.error('Erro ao carregar organizações:', error);
         this.loading = false;
-      }
+      },
     });
   }
 
@@ -91,7 +95,7 @@ export class OrganizationsComponent implements OnInit {
       limit: 10,
       offset: 0,
       orderBy: 'name',
-      direction: 'ASC'
+      direction: 'ASC',
     });
   }
 
@@ -102,14 +106,16 @@ export class OrganizationsComponent implements OnInit {
 
   onSeeOrganization(index: number) {
     const organization = this.organizations[index];
-    this.organizationsService.findOne(organization.id).subscribe({
+
+    this.organizationsService.findOne(organization.orgId).subscribe({
       next: (organizationDetails) => {
+        console.log('Detalhes da organização:', organizationDetails);
         this.selectedOrganization = organizationDetails;
         this.showSeeOrganization = true;
       },
       error: (error) => {
         console.error('Erro ao carregar detalhes da organização:', error);
-      }
+      },
     });
   }
 
