@@ -40,4 +40,12 @@ export class OrganizationsService {
       { headers: token, params }
     );
   }
+
+  findOne(id: string): Observable<Organization> {
+    const token = this.authService.makeHeadObjt();
+    return this.httpClient.get<Organization>(
+      `http://localhost:3000/organizations/${id}`,
+      { headers: token }
+    );
+  }
 }

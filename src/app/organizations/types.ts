@@ -8,4 +8,9 @@ export interface CreateOrganizationDto {
 
 export interface Organization extends CreateOrganizationDto {
   id: string;
+  owner?: {
+    id: string;
+    name: string;
+    email: string;
+  };
 }

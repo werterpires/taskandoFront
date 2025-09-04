@@ -1,1 +1,43 @@
-<p>see-organization works!</p>
+
+<app-modal>
+  <div class="organization-details" *ngIf="organization">
+    <div class="header">
+      <h2>Detalhes da Organização</h2>
+      <button class="close-btn" (click)="close()">×</button>
+    </div>
+    
+    <div class="content">
+      <div class="field-group">
+        <label>Nome:</label>
+        <p>{{ organization.name }}</p>
+      </div>
+      
+      <div class="field-group" *ngIf="organization.cnpj">
+        <label>CNPJ:</label>
+        <p>{{ organization.cnpj }}</p>
+      </div>
+      
+      <div class="field-group" *ngIf="organization.address">
+        <label>Endereço:</label>
+        <p>{{ organization.address }}</p>
+      </div>
+      
+      <div class="field-group" *ngIf="organization.phone">
+        <label>Telefone:</label>
+        <p>{{ organization.phone }}</p>
+      </div>
+      
+      <div class="field-group" *ngIf="organization.owner">
+        <label>Proprietário:</label>
+        <div class="owner-info">
+          <p><strong>Nome:</strong> {{ organization.owner.name }}</p>
+          <p><strong>Email:</strong> {{ organization.owner.email }}</p>
+        </div>
+      </div>
+    </div>
+    
+    <div class="actions">
+      <button class="btn-secondary" (click)="close()">Fechar</button>
+    </div>
+  </div>
+</app-modal>

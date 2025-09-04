@@ -1,6 +1,7 @@
 
 import { Component, OnInit } from '@angular/core';
 import { CreateOrganizationComponent } from './create-organization/create-organization.component';
+import { SeeOrganizationComponent } from './see-organization/see-organization.component';
 import { CommonModule } from '@angular/common';
 import { CustomTableComponent } from '../shared/components/custom-table/custom-table.component';
 import { TableData } from '../shared/components/custom-table/types';
@@ -10,12 +11,14 @@ import { Paginator } from '../shared/types/api';
 
 @Component({
   selector: 'app-organizations',
-  imports: [CreateOrganizationComponent, CommonModule, CustomTableComponent],
+  imports: [CreateOrganizationComponent, SeeOrganizationComponent, CommonModule, CustomTableComponent],
   templateUrl: './organizations.component.html',
   styleUrl: './organizations.component.css',
 })
 export class OrganizationsComponent implements OnInit {
   showCreateOrganization = false;
+  showSeeOrganization = false;
+  selectedOrganization: Organization | null = null;
   organizations: Organization[] = [];
   totalItems = 0;
   loading = false;
@@ -92,10 +95,22 @@ export class OrganizationsComponent implements OnInit {
     });
   }
 
+  closeSeeOrganization() {
+    this.showSeeOrganization = false;
+    this.selectedOrganization = null;
+  }
+
   onSeeOrganization(index: number) {
     const organization = this.organizations[index];
-    console.log('Ver organização:', organization);
-    // Aqui você pode implementar a navegação para ver detalhes da organização
+    this.organizationsService.findOne(organization.id).subscribe({
+      next: (organizationDetails) => {
+        this.selectedOrganization = organizationDetails;
+        this.showSeeOrganization = true;
+      },
+      error: (error) => {
+        console.error('Erro ao carregar detalhes da organização:', error);
+      }
+    });
   }
 
   onDeleteOrganization(index: number) {

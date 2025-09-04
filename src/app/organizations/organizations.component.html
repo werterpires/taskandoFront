@@ -22,4 +22,11 @@
     (closeEmitter)="closeCreateOrganization()"
   >
   </app-create-organization>
-</div>
+
+  <app-see-organization
+    *ngIf="showSeeOrganization"
+    [organization]="selectedOrganization"
+    (closeEmitter)="closeSeeOrganization()"
+  >
+  </app-see-organization>
+</div>v>
