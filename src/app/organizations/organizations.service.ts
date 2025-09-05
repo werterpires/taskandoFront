@@ -2,7 +2,11 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { AuthStateService } from '../shared/services/auth/auth-state.service';
-import { CreateOrganizationDto, Organization } from './types';
+import {
+  CreateOrganizationDto,
+  Organization,
+  UpdateOrganizationDto,
+} from './types';
 import { Paginator, Response } from '../shared/types/api';
 
 @Injectable({
@@ -11,7 +15,7 @@ import { Paginator, Response } from '../shared/types/api';
 export class OrganizationsService {
   constructor(
     private readonly httpClient: HttpClient,
-    private readonly authService: AuthStateService
+    private readonly authService: AuthStateService,
   ) {}
 
   createOrganization(organization: CreateOrganizationDto): Observable<any> {
@@ -19,7 +23,7 @@ export class OrganizationsService {
     return this.httpClient.post(
       'http://localhost:3000/organizations',
       organization,
-      { headers: token }
+      { headers: token },
     );
   }
 
@@ -37,7 +41,7 @@ export class OrganizationsService {
 
     return this.httpClient.get<Response<Organization>>(
       'http://localhost:3000/organizations',
-      { headers: token, params }
+      { headers: token, params },
     );
   }
 
@@ -45,24 +49,25 @@ export class OrganizationsService {
     const token = this.authService.makeHeadObjt();
     return this.httpClient.get<Organization>(
       `http://localhost:3000/organizations/${id}`,
-      { headers: token }
+      { headers: token },
     );
   }
 
-  updateOrganization(organization: UpdateOrganizationDto): Observable<Organization> {
+  updateOrganization(
+    organization: UpdateOrganizationDto,
+  ): Observable<Organization> {
     const token = this.authService.makeHeadObjt();
     return this.httpClient.put<Organization>(
       'http://localhost:3000/organizations',
       organization,
-      { headers: token }
+      { headers: token },
     );
   }
 
   deleteOrganization(id: number): Observable<any> {
     const token = this.authService.makeHeadObjt();
-    return this.httpClient.delete(
-      `http://localhost:3000/organizations/${id}`,
-      { headers: token }
-    );
+    return this.httpClient.delete(`http://localhost:3000/organizations/${id}`, {
+      headers: token,
+    });
   }
 }
