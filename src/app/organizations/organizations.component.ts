@@ -131,23 +131,29 @@ export class OrganizationsComponent implements OnInit {
 
   onDeleteOrganization(index: number) {
     const organization = this.organizations[index];
-    
-    if (confirm(`Tem certeza que deseja deletar a organização "${organization.name}"?`)) {
-      this.organizationsService.deleteOrganization(parseInt(organization.orgId)).subscribe({
-        next: () => {
-          console.log('Organização deletada com sucesso');
-          // Recarrega a lista após deletar
-          this.loadOrganizations({
-            limit: 10,
-            offset: 0,
-            orderBy: 'name',
-            direction: 'ASC',
-          });
-        },
-        error: (error) => {
-          console.error('Erro ao deletar organização:', error);
-        }
-      });
-    }r organização
+
+    if (
+      confirm(
+        `Tem certeza que deseja deletar a organização "${organization.name}"?`
+      )
+    ) {
+      this.organizationsService
+        .deleteOrganization(parseInt(organization.orgId))
+        .subscribe({
+          next: () => {
+            console.log('Organização deletada com sucesso');
+            // Recarrega a lista após deletar
+            this.loadOrganizations({
+              limit: 10,
+              offset: 0,
+              orderBy: 'name',
+              direction: 'ASC',
+            });
+          },
+          error: (error) => {
+            console.error('Erro ao deletar organização:', error);
+          },
+        });
+    }
   }
 }
