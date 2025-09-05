@@ -57,4 +57,12 @@ export class OrganizationsService {
       { headers: token }
     );
   }
+
+  deleteOrganization(id: number): Observable<any> {
+    const token = this.authService.makeHeadObjt();
+    return this.httpClient.delete(
+      `http://localhost:3000/organizations/${id}`,
+      { headers: token }
+    );
+  }
 }
