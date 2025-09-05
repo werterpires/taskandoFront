@@ -1,4 +1,3 @@
-
 <app-modal>
   <div class="organization-details" *ngIf="editableOrganization">
     <div class="header">
@@ -7,50 +6,6 @@
     </div>
 
     <div class="content">
-      <div class="field-group">
-        <label>Nome:</label>
-        <input 
-          type="text" 
-          class="editable-field" 
-          [(ngModel)]="editableOrganization.name"
-          (ngModelChange)="onFieldChange()"
-          placeholder="Digite o nome da organização"
-        />
-      </div>
-
-      <div class="field-group">
-        <label>CNPJ:</label>
-        <input 
-          type="text" 
-          class="editable-field" 
-          [(ngModel)]="editableOrganization.cnpj"
-          (ngModelChange)="onFieldChange()"
-          placeholder="Digite o CNPJ"
-        />
-      </div>
-
-      <div class="field-group">
-        <label>Endereço:</label>
-        <input 
-          type="text" 
-          class="editable-field" 
-          [(ngModel)]="editableOrganization.address"
-          (ngModelChange)="onFieldChange()"
-          placeholder="Digite o endereço"
-        />
-      </div>
-
-      <div class="field-group">
-        <label>Telefone:</label>
-        <input 
-          type="text" 
-          class="editable-field" 
-          [(ngModel)]="editableOrganization.phone"
-          (ngModelChange)="onFieldChange()"
-          placeholder="Digite o telefone"
-        />
-      </div>
-
       <div class="field-group" *ngIf="editableOrganization.owner">
         <label>Proprietário:</label>
         <div class="owner-info">
@@ -61,20 +16,65 @@
           <p><strong>Email:</strong> {{ editableOrganization.owner.email }}</p>
         </div>
       </div>
+      <div class="fields-containter">
+        <div class="field-group">
+          <label>Nome:</label>
+          <input
+            type="text"
+            class="editable-field"
+            [(ngModel)]="editableOrganization.name"
+            (ngModelChange)="onFieldChange()"
+            placeholder="Digite o nome da organização"
+          />
+        </div>
+
+        <div class="field-group">
+          <label>CNPJ:</label>
+          <input
+            type="text"
+            class="editable-field"
+            [(ngModel)]="editableOrganization.cnpj"
+            (ngModelChange)="onFieldChange()"
+            placeholder="Digite o CNPJ"
+          />
+        </div>
+
+        <div class="field-group">
+          <label>Endereço:</label>
+          <input
+            type="text"
+            class="editable-field"
+            [(ngModel)]="editableOrganization.address"
+            (ngModelChange)="onFieldChange()"
+            placeholder="Digite o endereço"
+          />
+        </div>
+
+        <div class="field-group">
+          <label>Telefone:</label>
+          <input
+            type="text"
+            class="editable-field"
+            [(ngModel)]="editableOrganization.phone"
+            (ngModelChange)="onFieldChange()"
+            placeholder="Digite o telefone"
+          />
+        </div>
+      </div>
     </div>
 
     <div class="actions">
-      <button 
-        *ngIf="hasChanges" 
-        class="btn-primary" 
+      <button
+        *ngIf="hasChanges"
+        class="btn-primary"
         (click)="saveChanges()"
         [disabled]="isUpdating"
       >
-        {{ isUpdating ? 'Salvando...' : 'Salvar' }}
+        {{ isUpdating ? "Salvando..." : "Salvar" }}
       </button>
-      <button 
-        *ngIf="hasChanges" 
-        class="btn-tertiary" 
+      <button
+        *ngIf="hasChanges"
+        class="btn-tertiary"
         (click)="cancelChanges()"
         [disabled]="isUpdating"
       >

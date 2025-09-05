@@ -12,7 +12,6 @@
 
 .modal-box {
   background-color: var(--neutral-background);
-  padding: 48px;
   border-radius: 8px;
   max-width: 90vw;
   max-height: 90vh;

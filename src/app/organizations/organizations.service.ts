@@ -2,7 +2,11 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { AuthStateService } from '../shared/services/auth/auth-state.service';
-import { CreateOrganizationDto, Organization } from './types';
+import {
+  CreateOrganizationDto,
+  Organization,
+  UpdateOrganizationDto,
+} from './types';
 import { Paginator, Response } from '../shared/types/api';
 
 @Injectable({
@@ -49,7 +53,9 @@ export class OrganizationsService {
     );
   }
 
-  updateOrganization(organization: UpdateOrganizationDto): Observable<Organization> {
+  updateOrganization(
+    organization: UpdateOrganizationDto
+  ): Observable<Organization> {
     const token = this.authService.makeHeadObjt();
     return this.httpClient.put<Organization>(
       'http://localhost:3000/organizations',
