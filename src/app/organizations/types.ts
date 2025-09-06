@@ -1,3 +1,4 @@
+import { userRoleEnum } from '../shared/types/roles.enum';
 import { User } from '../shared/types/user.types';
 
 export interface CreateOrganizationDto {
@@ -10,6 +11,7 @@ export interface CreateOrganizationDto {
 export interface Organization extends CreateOrganizationDto {
   orgId: string;
   owner?: User;
+  currentUserRoles?: userRoleEnum[];
 }
 
 export interface UpdateOrganizationDto extends Partial<CreateOrganizationDto> {

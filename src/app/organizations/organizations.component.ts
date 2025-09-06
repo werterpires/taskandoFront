@@ -68,6 +68,7 @@ export class OrganizationsComponent implements OnInit {
     this.loading = true;
     this.organizationsService.getOrganizations(paginator).subscribe({
       next: (response) => {
+        console.log('Organizações carregadas:', response.itens);
         this.organizations = response.itens;
         this.totalItems = response.quantity;
         this.tableData.data = response.itens;
