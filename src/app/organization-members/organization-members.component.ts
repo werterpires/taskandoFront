@@ -26,8 +26,10 @@ export class OrganizationMembersComponent implements OnInit {
   members: OrganizationMember[] = [];
   isLoading = false;
   paginator: Paginator = {
-    page: 1,
-    pageSize: 10,
+    limit: 10,
+    offset: 0,
+    orderBy: 'userId',
+    direction: 'ASC'
   };
   totalItems = 0;
   columns: TableColumn[] = [
@@ -65,19 +67,12 @@ export class OrganizationMembersComponent implements OnInit {
   }
 
   onPageChange(page: number) {
-    this.paginator.page = page;
+    this.paginator.offset = (page - 1) * (this.paginator.limit || 10);
     this.loadMembers();
   }
 
   onSearch(searchTerm: string) {
-    this.membersService.searchMembers(this.orgId, searchTerm, this.paginator).subscribe({
-      next: (response) => {
-        this.members = response.data;
-        this.totalItems = response.total;
-      },
-      error: (error) => {
-        console.error('Error searching members:', error);
-      },
-    });
+    // Search functionality not available in current API
+    console.log('Search not implemented:', searchTerm);
   }
 }

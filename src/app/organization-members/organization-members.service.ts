@@ -17,55 +17,48 @@ export class OrganizationMembersService {
     private readonly authService: AuthStateService,
   ) {}
 
+  createInvite(createInviteDto: CreateInviteDto): Observable<any> {
+    const token = this.authService.makeHeadObjt();
+    return this.httpClient.put(
+      `${this.baseUrl}/organizations-members/invite`,
+      createInviteDto,
+      { headers: token }
+    );
+  }
+
   getAllMembers(orgId: number, paginator: Paginator): Observable<Response<OrganizationMember>> {
     const token = this.authService.makeHeadObjt();
 
     let params = new HttpParams()
-      .set('page', paginator.page.toString())
-      .set('pageSize', paginator.pageSize.toString());
+      .set('limit', paginator.limit?.toString() || '10')
+      .set('offset', paginator.offset?.toString() || '0')
+      .set('orderBy', paginator.orderBy || 'userId')
+      .set('direction', paginator.direction || 'ASC');
 
     return this.httpClient.get<Response<OrganizationMember>>(
-      `${this.baseUrl}/organizations/${orgId}/members`,
+      `${this.baseUrl}/organizations-members/organization/${orgId}`,
       { headers: token, params }
     );
   }
 
-  searchMembers(orgId: number, searchTerm: string, paginator: Paginator): Observable<Response<OrganizationMember>> {
+  getMemberById(userId: number, orgId: number): Observable<OrganizationMember> {
     const token = this.authService.makeHeadObjt();
 
     let params = new HttpParams()
-      .set('page', paginator.page.toString())
-      .set('pageSize', paginator.pageSize.toString())
-      .set('search', searchTerm);
+      .set('userId', userId.toString())
+      .set('orgId', orgId.toString());
 
-    return this.httpClient.get<Response<OrganizationMember>>(
-      `${this.baseUrl}/organizations/${orgId}/members`,
+    return this.httpClient.get<OrganizationMember>(
+      `${this.baseUrl}/organizations-members/member`,
       { headers: token, params }
     );
   }
 
-  createInvite(inviteDto: CreateInviteDto): Observable<any> {
-    const token = this.authService.makeHeadObjt();
-    return this.httpClient.post(
-      `${this.baseUrl}/organizations/${inviteDto.orgId}/invites`,
-      inviteDto,
-      { headers: token }
-    );
-  }
-
-  updateMember(orgId: number, memberId: number, updateDto: UpdateMemberDto): Observable<OrganizationMember> {
+  updateMember(updateMemberDto: UpdateMemberDto): Observable<OrganizationMember> {
     const token = this.authService.makeHeadObjt();
     return this.httpClient.put<OrganizationMember>(
-      `${this.baseUrl}/organizations/${orgId}/members/${memberId}`,
-      updateDto,
-      { headers: token }
-    );
-  }
-
-  removeMember(orgId: number, memberId: number): Observable<any> {
-    const token = this.authService.makeHeadObjt();
-    return this.httpClient.delete(
-      `${this.baseUrl}/organizations/${orgId}/members/${memberId}`,
+      `${this.baseUrl}/organizations-members/update`,
+      updateMemberDto,
       { headers: token }
     );
   }
