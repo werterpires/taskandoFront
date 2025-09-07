@@ -1,0 +1,56 @@
+import { Component, OnInit, Input } from '@angular/core';
+import { OrganizationMember } from 'src/app/models/organization-member';
+import { OrganizationMemberService } from 'src/app/services/organization-member.service';
+import { ToastrService } from 'ngx-toastr';
+
+@Component({
+  selector: 'app-organization-members',
+  templateUrl: './organization-members.component.html',
+  styleUrls: ['./organization-members.component.css']
+})
+export class OrganizationMembersComponent implements OnInit {
+  members: OrganizationMember[] = [];
+  showCreateModal = false;
+  @Input() orgId: string = '';
+
+  constructor(
+    private organizationMemberService: OrganizationMemberService,
+    private toastrService: ToastrService
+  ) { }
+
+  ngOnInit(): void {
+    this.loadMembers();
+  }
+
+  loadMembers(): void {
+    if (this.orgId) {
+      this.organizationMemberService.getOrganizationMembers(this.orgId).subscribe({
+        next: (members) => {
+          this.members = members;
+        },
+        error: (error) => {
+          console.error('Error loading members:', error);
+          this.toastrService.error('Failed to load members.');
+        }
+      });
+    }
+  }
+
+  openCreateModal(): void {
+    this.showCreateModal = true;
+  }
+
+  closeCreateModal(): void {
+    this.showCreateModal = false;
+  }
+
+  onMemberCreated(): void {
+    this.toastrService.success('Member created successfully!');
+    this.loadMembers(); // Reload members after creation
+  }
+
+  onMemberDeleted(): void {
+    this.toastrService.success('Member deleted successfully!');
+    this.loadMembers(); // Reload members after deletion
+  }
+}
