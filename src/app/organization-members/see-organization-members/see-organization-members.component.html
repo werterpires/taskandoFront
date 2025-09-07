@@ -1,1 +1,77 @@
-<p>see-organization-members works!</p>
+
+<app-modal (closeEmitter)="close()">
+  <h2 modal-title>Detalhes do Membro</h2>
+  
+  <div modal-content *ngIf="member && editableMember">
+    <div class="member-info">
+      <div class="info-group">
+        <label>Nome:</label>
+        <span>{{ member.user?.firstName || 'N/A' }} {{ member.user?.lastName || '' }}</span>
+      </div>
+      
+      <div class="info-group">
+        <label>Email:</label>
+        <span>{{ member.user?.email || 'N/A' }}</span>
+      </div>
+      
+      <div class="info-group">
+        <label>ID do Usuário:</label>
+        <span>{{ member.userId }}</span>
+      </div>
+    </div>
+
+    <form class="edit-form">
+      <div class="form-group">
+        <label for="role">Função:</label>
+        <select 
+          id="role"
+          [(ngModel)]="editableMember.role"
+          name="role"
+          class="form-select"
+          (change)="onFieldChange()">
+          <option *ngFor="let role of availableRoles" [value]="role.name">
+            {{ role.description }}
+          </option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input 
+            type="checkbox"
+            [(ngModel)]="editableMember.active"
+            name="active"
+            (change)="onFieldChange()">
+          <span class="checkmark"></span>
+          Membro ativo
+        </label>
+      </div>
+    </form>
+
+    <div class="form-actions">
+      <button 
+        type="button" 
+        class="btn btn-secondary" 
+        (click)="close()"
+        [disabled]="isUpdating">
+        Fechar
+      </button>
+      
+      <button 
+        type="button" 
+        class="btn btn-outline" 
+        (click)="cancelChanges()"
+        [disabled]="!hasChanges || isUpdating">
+        Cancelar Alterações
+      </button>
+      
+      <button 
+        type="button" 
+        class="btn btn-primary"
+        (click)="saveChanges()"
+        [disabled]="!hasChanges || isUpdating">
+        {{ isUpdating ? 'Salvando...' : 'Salvar Alterações' }}
+      </button>
+    </div>
+  </div>
+</app-modal>
