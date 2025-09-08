@@ -6,7 +6,7 @@ import { OrganizationsComponent } from './organizations/organizations.component'
 export const routes: Routes = [
   {
     path: '',
-    component: LogonComponent,
+    component: OrganizationsComponent,
   },
   {
     path: 'logon',
