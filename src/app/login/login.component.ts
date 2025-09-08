@@ -8,6 +8,7 @@ import { LoginService } from './login.service';
 import { CommonModule } from '@angular/common';
 import { MessagesService } from '../shared/components/messages/messages.service';
 import { LoaderService } from '../shared/components/loader/loader.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-login',
@@ -28,7 +29,9 @@ export class LoginComponent {
 
   constructor(
     private readonly loginService: LoginService,
-    private readonly loaderService: LoaderService
+    private readonly loaderService: LoaderService,
+    private readonly messagesService: MessagesService,
+    private readonly router: Router
   ) {
     this.loginService.showLogin$.subscribe((show) => {
       this.showLogin = show;
@@ -57,11 +60,21 @@ export class LoginComponent {
         this.loginService.saveToken(userToken);
         this.loginService.saveUser(userToken);
         this.loginService.hideLogin();
-
-        window.location.reload();
+        
+        // Redireciona para a rota vazia
+        this.router.navigate(['']);
       },
       error: (error) => {
-        throw error;
+        // Exibe mensagem de erro
+        this.messagesService.show({
+          type: 'error',
+          title: 'Erro no Login',
+          description: [
+            'Ocorreu um erro ao tentar fazer login.',
+            error?.error?.message || 'Verifique suas credenciais e tente novamente.'
+          ],
+          show: true
+        });
       },
       complete: () => {
         this.loaderService.showLoader(false);
