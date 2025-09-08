@@ -1,14 +1,15 @@
-
-import { userRoleEnum } from '../shared/types/roles.enum';
+import { Organization } from '../organizations/types';
+import { UserRoleEnum } from '../shared/types/roles.enum';
+import { User } from '../shared/types/user.types';
 
 export interface CreateInviteDto {
   email: string;
-  role: userRoleEnum;
+  role: UserRoleEnum;
   orgId: number;
 }
 
 export interface UpdateMemberDto {
-  role: userRoleEnum;
+  role: UserRoleEnum;
   userId: number;
   orgId: number;
   active: boolean;
@@ -17,18 +18,10 @@ export interface UpdateMemberDto {
 export interface createOrganizationMember {
   userId: number;
   orgId: number;
-  role: userRoleEnum;
+  role: UserRoleEnum;
 }
 
-export interface OrganizationMember extends createOrganizationMember {
-  user?: {
-    id: number;
-    name: string;
-    email: string;
-  };
-  organization?: {
-    id: number;
-    name: string;
-  };
+export interface OrganizationMember extends createOrganizationMember, User {
+  organization?: Organization;
   active?: boolean;
 }

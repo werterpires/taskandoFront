@@ -2,15 +2,15 @@ import { Component, Output, EventEmitter, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ModalComponent } from '../../shared/components/modal/modal.component';
-import { OrganizationMembersService } from '../organization-members.service';
 import { CreateInviteDto } from '../types';
-import { userRoles } from '../../shared/types/roles.enum';
+import { UserRoleEnum, userRoles } from '../../shared/types/roles.enum';
+import { OrganizationMembersService } from '../organization-members.service';
 
 @Component({
   selector: 'app-create-organization-member',
   imports: [CommonModule, ModalComponent, FormsModule],
   templateUrl: './create-organization-member.component.html',
-  styleUrl: './create-organization-member.component.css'
+  styleUrl: './create-organization-member.component.css',
 })
 export class CreateOrganizationMemberComponent {
   @Input() orgId!: number;
@@ -19,7 +19,7 @@ export class CreateOrganizationMemberComponent {
 
   newMember = {
     email: '',
-    role: userRoles.MEMBER,
+    role: UserRoleEnum.CONTRIBUTOR,
   };
 
   isCreating = false;
@@ -27,7 +27,12 @@ export class CreateOrganizationMemberComponent {
   constructor(private organizationMembersService: OrganizationMembersService) {}
 
   createInvite() {
-    if (this.isCreating || !this.newMember.email || !this.newMember.role || !this.orgId) {
+    if (
+      this.isCreating ||
+      !this.newMember.email ||
+      !this.newMember.role ||
+      !this.orgId
+    ) {
       return;
     }
 
@@ -42,7 +47,7 @@ export class CreateOrganizationMemberComponent {
       next: () => {
         this.createEmitter.emit();
         this.newMember.email = '';
-        this.newMember.role = userRoles.MEMBER;
+        this.newMember.role = UserRoleEnum.CONTRIBUTOR;
       },
       error: () => {
         // TODO: Handle error

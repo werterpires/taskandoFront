@@ -1,4 +1,4 @@
-export enum userRoleEnum {
+export enum UserRoleEnum {
   WATCHER = 'watcher',
   REVIEWER = 'reviewer',
   EXECUTOR = 'executor',
@@ -10,38 +10,38 @@ export enum userRoleEnum {
 
 export const userRoles: userRole[] = [
   {
-    name: userRoleEnum.WATCHER,
+    name: UserRoleEnum.WATCHER,
     description: 'Pode ver',
   },
   {
-    name: userRoleEnum.CONTRIBUTOR,
+    name: UserRoleEnum.CONTRIBUTOR,
     description: 'Pode ver e ver filhos',
   },
   {
-    name: userRoleEnum.EXECUTOR,
+    name: UserRoleEnum.EXECUTOR,
     description: 'Pode ver e interagir, ver filhos',
   },
   {
-    name: userRoleEnum.REVIEWER,
+    name: UserRoleEnum.REVIEWER,
     description: 'Pode ver, interagir e aprovar, ver filhos',
   },
   {
-    name: userRoleEnum.EDITOR,
+    name: UserRoleEnum.EDITOR,
     description: 'Pode ver, interagir e adicionar filhos, ver filhos',
   },
   {
-    name: userRoleEnum.LEADER,
+    name: UserRoleEnum.LEADER,
     description:
       'Pode Ver, interagir, aprovar, adicionar filhos, ver filhos e adicionar membros.',
   },
   {
-    name: userRoleEnum.OWNER,
+    name: UserRoleEnum.OWNER,
     description:
       'Pode Ver, interagir, aprovar, adicionar filhos, adicionar membros, editar e deletar.',
   },
 ];
 
 export interface userRole {
-  name: userRoleEnum;
+  name: UserRoleEnum;
   description: string;
 }

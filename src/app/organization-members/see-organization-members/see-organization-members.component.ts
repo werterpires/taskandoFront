@@ -1,17 +1,23 @@
-
-import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges } from '@angular/core';
+import {
+  Component,
+  Input,
+  Output,
+  EventEmitter,
+  OnChanges,
+  SimpleChanges,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { OrganizationMember, UpdateMemberDto } from '../types';
 import { ModalComponent } from '../../shared/components/modal/modal.component';
 import { OrganizationMembersService } from '../organization-members.service';
-import { userRoleEnum, userRoles } from '../../shared/types/roles.enum';
+import { UserRoleEnum, userRoles } from '../../shared/types/roles.enum';
 
 @Component({
   selector: 'app-see-organization-members',
   imports: [CommonModule, ModalComponent, FormsModule],
   templateUrl: './see-organization-members.component.html',
-  styleUrl: './see-organization-members.component.css'
+  styleUrl: './see-organization-members.component.css',
 })
 export class SeeOrganizationMembersComponent implements OnChanges {
   @Input() member: OrganizationMember | null = null;
@@ -41,7 +47,7 @@ export class SeeOrganizationMembersComponent implements OnChanges {
 
   onFieldChange() {
     if (this.editableMember && this.originalMember) {
-      this.hasChanges = 
+      this.hasChanges =
         this.editableMember.role !== this.originalMember.role ||
         this.editableMember.active !== (this.originalMember.active || true);
     }
@@ -81,8 +87,8 @@ export class SeeOrganizationMembersComponent implements OnChanges {
     this.closeEmitter.emit();
   }
 
-  getRoleDescription(role: userRoleEnum): string {
-    const roleObj = this.availableRoles.find(r => r.name === role);
+  getRoleDescription(role: UserRoleEnum): string {
+    const roleObj = this.availableRoles.find((r) => r.name === role);
     return roleObj ? roleObj.description : role;
   }
 }
