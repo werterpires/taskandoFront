@@ -25,6 +25,8 @@ export class OrganizationMembersComponent implements OnInit {
   @Input() orgId!: number;
   members: OrganizationMember[] = [];
   isLoading = false;
+  showCreateModal = false;
+  selectedMember: OrganizationMember | null = null;
   paginator: Paginator = {
     limit: 10,
     offset: 0,
@@ -36,7 +38,7 @@ export class OrganizationMembersComponent implements OnInit {
   tableData: TableData<OrganizationMember> = {
     data: [],
     columns: [
-      { name: 'userId', label: 'Usuário', width: 200 },
+      { name: 'userId', label: 'Usuário', width: 200 },
       { name: 'role', label: 'Papel', width: 150 },
       { name: 'active', label: 'Ativo', width: 100 },
       { name: 'firstName', label: 'Nome', width: 150 },
@@ -81,5 +83,28 @@ export class OrganizationMembersComponent implements OnInit {
   onSearch(searchTerm: string) {
     // Search functionality not available in current API
     console.log('Search not implemented:', searchTerm);
+  }
+
+  openCreateModal() {
+    this.selectedMember = null;
+    this.showCreateModal = true;
+  }
+
+  closeCreateModal() {
+    this.showCreateModal = false;
+    this.loadMembers(); // Reload members after closing the modal
+  }
+
+  openEditModal(member: OrganizationMember) {
+    this.selectedMember = member;
+    this.showCreateModal = true;
+  }
+
+  onMemberCreated() {
+    this.loadMembers();
+  }
+
+  onMemberUpdated() {
+    this.loadMembers();
   }
 }

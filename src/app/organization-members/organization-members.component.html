@@ -1,36 +1,35 @@
-<div class="organization-members-container">
-  <div class="header">
-    <h2>Membros da Organização</h2>
-    <button
-      class="btn btn-primary"
-      (click)="openCreateModal()"
-      type="button">
-      Adicionar Membro
-    </button>
-  </div>
 
-  <app-custom-table
-    [tableData]="tableData"
-    [isLoading]="isLoading"
-    [totalItems]="totalItems"
-    [currentPage]="(paginator.offset / (paginator.limit || 10)) + 1"
-    [itemsPerPage]="paginator.limit || 10"
-    (pageChange)="onPageChange($event)"
-    (search)="onSearch($event)"
-    (rowClick)="onMemberClick($event)">
-  </app-custom-table>
+<div class="organization-members-container">
+  <h1>Membros da Organização</h1>
+
+  <div class="table-container" *ngIf="!showCreateModal && !selectedMember">
+    <app-custom-table
+      [tableData]="tableData"
+      [totalItems]="totalItems"
+      [loading]="isLoading"
+      [invite]="false"
+      [del]="true"
+      [seee]="true"
+      (paginationChangeEmitter)="onPaginationChange($event)"
+      (seeEmitter)="onSeeMember($event)"
+      (deleteEmitter)="onDeleteMember($event)"
+      (creatingEmitter)="openCreateModal()"
+    >
+    </app-custom-table>
+  </div>
 
   <app-create-organization-member
     *ngIf="showCreateModal"
     [orgId]="orgId"
     (closeEmitter)="closeCreateModal()"
-    (createEmitter)="onMemberCreated()">
+  >
   </app-create-organization-member>
 
   <app-see-organization-members
     *ngIf="selectedMember"
     [member]="selectedMember"
     (closeEmitter)="closeMemberModal()"
-    (updateEmitter)="onMemberUpdated()">
+    (updateEmitter)="onMemberUpdated()"
+  >
   </app-see-organization-members>
 </div>
