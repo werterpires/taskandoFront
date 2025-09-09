@@ -109,17 +109,18 @@ export class OrganizationMembersComponent implements OnInit {
     this.loadMembers();
   }
 
-  onSeeMember(memberId: number) {
-    const member = this.members.find(m => m.userId === memberId);
+  onSeeMember(index: number) {
+    const member = this.members[index];
     if (member) {
       this.selectedMember = member;
       this.showCreateModal = false;
     }
   }
 
-  onDeleteMember(memberId: number) {
-    if (confirm('Tem certeza que deseja excluir este membro?')) {
-      this.membersService.deleteMember(memberId).subscribe({
+  onDeleteMember(index: number) {
+    const member = this.members[index];
+    if (member && confirm('Tem certeza que deseja excluir este membro?')) {
+      this.membersService.deleteMember(member.userId).subscribe({
         next: () => {
           this.loadMembers();
         },
