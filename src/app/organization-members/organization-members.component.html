@@ -1,56 +1,36 @@
-import { Component, OnInit, Input } from '@angular/core';
-import { OrganizationMember } from 'src/app/models/organization-member';
-import { OrganizationMemberService } from 'src/app/services/organization-member.service';
-import { ToastrService } from 'ngx-toastr';
+<div class="organization-members-container">
+  <div class="header">
+    <h2>Membros da Organização</h2>
+    <button
+      class="btn btn-primary"
+      (click)="openCreateModal()"
+      type="button">
+      Adicionar Membro
+    </button>
+  </div>
 
-@Component({
-  selector: 'app-organization-members',
-  templateUrl: './organization-members.component.html',
-  styleUrls: ['./organization-members.component.css']
-})
-export class OrganizationMembersComponent implements OnInit {
-  members: OrganizationMember[] = [];
-  showCreateModal = false;
-  @Input() orgId: string = '';
+  <app-custom-table
+    [tableData]="tableData"
+    [isLoading]="isLoading"
+    [totalItems]="totalItems"
+    [currentPage]="(paginator.offset / (paginator.limit || 10)) + 1"
+    [itemsPerPage]="paginator.limit || 10"
+    (pageChange)="onPageChange($event)"
+    (search)="onSearch($event)"
+    (rowClick)="onMemberClick($event)">
+  </app-custom-table>
 
-  constructor(
-    private organizationMemberService: OrganizationMemberService,
-    private toastrService: ToastrService
-  ) { }
+  <app-create-organization-member
+    *ngIf="showCreateModal"
+    [orgId]="orgId"
+    (closeEmitter)="closeCreateModal()"
+    (createEmitter)="onMemberCreated()">
+  </app-create-organization-member>
 
-  ngOnInit(): void {
-    this.loadMembers();
-  }
-
-  loadMembers(): void {
-    if (this.orgId) {
-      this.organizationMemberService.getOrganizationMembers(this.orgId).subscribe({
-        next: (members) => {
-          this.members = members;
-        },
-        error: (error) => {
-          console.error('Error loading members:', error);
-          this.toastrService.error('Failed to load members.');
-        }
-      });
-    }
-  }
-
-  openCreateModal(): void {
-    this.showCreateModal = true;
-  }
-
-  closeCreateModal(): void {
-    this.showCreateModal = false;
-  }
-
-  onMemberCreated(): void {
-    this.toastrService.success('Member created successfully!');
-    this.loadMembers(); // Reload members after creation
-  }
-
-  onMemberDeleted(): void {
-    this.toastrService.success('Member deleted successfully!');
-    this.loadMembers(); // Reload members after deletion
-  }
-}
+  <app-see-organization-members
+    *ngIf="selectedMember"
+    [member]="selectedMember"
+    (closeEmitter)="closeMemberModal()"
+    (updateEmitter)="onMemberUpdated()">
+  </app-see-organization-members>
+</div>
