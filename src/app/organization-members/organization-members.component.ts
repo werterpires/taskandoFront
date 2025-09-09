@@ -65,6 +65,7 @@ export class OrganizationMembersComponent implements OnInit {
     this.membersService.getAllMembers(this.orgId, this.paginator).subscribe({
       next: (response) => {
         this.members = response.itens;
+        this.tableData.data = this.members;
         this.totalItems = response.quantity;
         this.isLoading = false;
       },
@@ -106,5 +107,35 @@ export class OrganizationMembersComponent implements OnInit {
 
   onMemberUpdated() {
     this.loadMembers();
+  }
+
+  onSeeMember(memberId: number) {
+    const member = this.members.find(m => m.userId === memberId);
+    if (member) {
+      this.selectedMember = member;
+      this.showCreateModal = false;
+    }
+  }
+
+  onDeleteMember(memberId: number) {
+    if (confirm('Tem certeza que deseja excluir este membro?')) {
+      this.membersService.deleteMember(memberId).subscribe({
+        next: () => {
+          this.loadMembers();
+        },
+        error: (error) => {
+          console.error('Error deleting member:', error);
+        }
+      });
+    }
+  }
+
+  onPaginationChange(paginator: Paginator) {
+    this.paginator = { ...this.paginator, ...paginator };
+    this.loadMembers();
+  }
+
+  closeMemberModal() {
+    this.selectedMember = null;
   }
 }
