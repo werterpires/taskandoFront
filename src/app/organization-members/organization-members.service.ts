@@ -1,4 +1,3 @@
-
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
@@ -14,7 +13,7 @@ export class OrganizationMembersService {
 
   constructor(
     private readonly httpClient: HttpClient,
-    private readonly authService: AuthStateService,
+    private readonly authService: AuthStateService
   ) {}
 
   createInvite(createInviteDto: CreateInviteDto): Observable<any> {
@@ -26,8 +25,12 @@ export class OrganizationMembersService {
     );
   }
 
-  getAllMembers(orgId: number, paginator: Paginator): Observable<Response<OrganizationMember>> {
+  getAllMembers(
+    orgId: number,
+    paginator: Paginator
+  ): Observable<Response<OrganizationMember>> {
     const token = this.authService.makeHeadObjt();
+    console.log('token 1:', token);
 
     let params = new HttpParams()
       .set('limit', paginator.limit?.toString() || '10')
@@ -54,7 +57,9 @@ export class OrganizationMembersService {
     );
   }
 
-  updateMember(updateMemberDto: UpdateMemberDto): Observable<OrganizationMember> {
+  updateMember(
+    updateMemberDto: UpdateMemberDto
+  ): Observable<OrganizationMember> {
     const token = this.authService.makeHeadObjt();
     return this.httpClient.put<OrganizationMember>(
       `${this.baseUrl}/organizations-members/update`,

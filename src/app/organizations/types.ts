@@ -9,7 +9,7 @@ export interface CreateOrganizationDto {
 }
 
 export interface Organization extends CreateOrganizationDto {
-  orgId: string;
+  orgId: number;
   owner?: User;
   currentUserRoles?: UserRoleEnum[];
 }

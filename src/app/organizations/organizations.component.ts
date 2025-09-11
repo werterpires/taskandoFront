@@ -139,7 +139,7 @@ export class OrganizationsComponent implements OnInit {
       )
     ) {
       this.organizationsService
-        .deleteOrganization(parseInt(organization.orgId))
+        .deleteOrganization(organization.orgId)
         .subscribe({
           next: () => {
             console.log('Organização deletada com sucesso');

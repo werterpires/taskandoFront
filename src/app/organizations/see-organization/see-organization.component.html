@@ -82,5 +82,9 @@
       </button>
       <button class="btn-secondary" (click)="close()">Fechar</button>
     </div>
+
+    <app-organization-members
+      [orgId]="organization?.orgId || 0"
+    ></app-organization-members>
   </div>
 </app-modal>

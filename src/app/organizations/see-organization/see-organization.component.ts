@@ -1,16 +1,28 @@
-
-import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges } from '@angular/core';
+import {
+  Component,
+  Input,
+  Output,
+  EventEmitter,
+  OnChanges,
+  SimpleChanges,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Organization, UpdateOrganizationDto } from '../types';
 import { ModalComponent } from '../../shared/components/modal/modal.component';
 import { OrganizationsService } from '../organizations.service';
+import { OrganizationMembersComponent } from '../../organization-members/organization-members.component';
 
 @Component({
   selector: 'app-see-organization',
-  imports: [CommonModule, ModalComponent, FormsModule],
+  imports: [
+    CommonModule,
+    ModalComponent,
+    FormsModule,
+    OrganizationMembersComponent,
+  ],
   templateUrl: './see-organization.component.html',
-  styleUrl: './see-organization.component.css'
+  styleUrl: './see-organization.component.css',
 })
 export class SeeOrganizationComponent implements OnChanges {
   @Input() organization: Organization | null = null;
@@ -34,10 +46,11 @@ export class SeeOrganizationComponent implements OnChanges {
 
   onFieldChange() {
     if (this.editableOrganization && this.originalOrganization) {
-      this.hasChanges = 
+      this.hasChanges =
         this.editableOrganization.name !== this.originalOrganization.name ||
         this.editableOrganization.cnpj !== this.originalOrganization.cnpj ||
-        this.editableOrganization.address !== this.originalOrganization.address ||
+        this.editableOrganization.address !==
+          this.originalOrganization.address ||
         this.editableOrganization.phone !== this.originalOrganization.phone;
     }
   }
@@ -46,13 +59,13 @@ export class SeeOrganizationComponent implements OnChanges {
     if (!this.editableOrganization || !this.hasChanges) return;
 
     this.isUpdating = true;
-    
+
     const updateDto: UpdateOrganizationDto = {
-      orgId: parseInt(this.editableOrganization.orgId),
+      orgId: this.editableOrganization.orgId,
       name: this.editableOrganization.name,
       cnpj: this.editableOrganization.cnpj || undefined,
       address: this.editableOrganization.address || undefined,
-      phone: this.editableOrganization.phone || undefined
+      phone: this.editableOrganization.phone || undefined,
     };
 
     this.organizationsService.updateOrganization(updateDto).subscribe({
@@ -68,7 +81,7 @@ export class SeeOrganizationComponent implements OnChanges {
       error: (error) => {
         console.error('Erro ao atualizar organização:', error);
         this.isUpdating = false;
-      }
+      },
     });
   }
 

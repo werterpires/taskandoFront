@@ -50,9 +50,8 @@ export class OrganizationMembersComponent implements OnInit {
   constructor(private membersService: OrganizationMembersService) {}
 
   ngOnInit() {
-    if (this.orgId) {
-      this.loadMembers();
-    }
+    this.loadMembers();
+    console.log('Organization ID:', this.orgId);
   }
 
   loadMembers() {
@@ -64,6 +63,7 @@ export class OrganizationMembersComponent implements OnInit {
     this.isLoading = true;
     this.membersService.getAllMembers(this.orgId, this.paginator).subscribe({
       next: (response) => {
+        console.log('Members loaded:', response);
         this.members = response.itens;
         this.tableData.data = this.members;
         this.totalItems = response.quantity;
@@ -119,16 +119,16 @@ export class OrganizationMembersComponent implements OnInit {
 
   onDeleteMember(index: number) {
     const member = this.members[index];
-    if (member && confirm('Tem certeza que deseja excluir este membro?')) {
-      this.membersService.deleteMember(member.userId).subscribe({
-        next: () => {
-          this.loadMembers();
-        },
-        error: (error) => {
-          console.error('Error deleting member:', error);
-        }
-      });
-    }
+    // if (member && confirm('Tem certeza que deseja excluir este membro?')) {
+    //   this.membersService.deleteMember(member.userId).subscribe({
+    //     next: () => {
+    //       this.loadMembers();
+    //     },
+    //     error: (error) => {
+    //       console.error('Error deleting member:', error);
+    //     }
+    //   });
+    // }
   }
 
   onPaginationChange(paginator: Paginator) {
