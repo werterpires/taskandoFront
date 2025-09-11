@@ -65,7 +65,8 @@ form {
 #login-button:hover {
   transform: translateY(-1px);
   box-shadow: var(--shadow-md);
-  background: linear-gradient(135deg, var(--primary-hover), #3730a3);
+  background: linear-gradient(135deg, var(--primary-hover), var(--primary-hover));
+  filter: brightness(0.9);
 }
 
 #login-button:active {

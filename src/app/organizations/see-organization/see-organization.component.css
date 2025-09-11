@@ -77,7 +77,7 @@
 }
 
 .owner-info {
-  background: var(--background-secondary);
+  background: var(--bg-secondary);
   padding: var(--spacing-md);
   border-radius: var(--radius-md);
   border-left: 4px solid var(--primary-color);
@@ -94,14 +94,14 @@
   border-radius: var(--radius-sm);
   font-size: var(--font-size-base);
   color: var(--text-secondary);
-  background-color: var(--background-primary);
+  background-color: var(--bg-primary);
   transition: all 0.2s ease;
 }
 
 .editable-field:focus {
   outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
 .editable-field:hover {
@@ -134,7 +134,7 @@
     var(--primary-color),
     var(--primary-hover)
   );
-  color: white;
+  color: var(--text-white);
 }
 
 .btn-primary:hover:not(:disabled) {

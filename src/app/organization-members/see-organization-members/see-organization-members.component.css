@@ -1,5 +1,5 @@
 .member-info {
-  background-color: var(--bg-gray-50);
+  background-color: var(--bg-secondary);
   padding: var(--spacing-lg);
   border-radius: var(--radius-md);
   margin-bottom: var(--spacing-lg);
@@ -46,13 +46,13 @@
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   font-size: var(--font-size-base);
-  background-color: var(--bg-white);
+  background-color: var(--bg-primary);
   transition: border-color 0.2s ease;
 }
 
 .form-select:focus {
   outline: none;
-  border-color: var(--primary-color);
+  border-color: var(--border-focus);
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
@@ -101,13 +101,13 @@
 }
 
 .btn-secondary {
-  background-color: var(--bg-gray-100);
+  background-color: var(--bg-secondary);
   color: var(--text-secondary);
   border: 1px solid var(--border-color);
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background-color: var(--bg-gray-200);
+  background-color: var(--secondary-light);
 }
 
 .btn-outline {
@@ -117,40 +117,11 @@
 }
 
 .btn-outline:hover:not(:disabled) {
-  background-color: var(--bg-gray-50);
+  background-color: var(--bg-secondary);
 }
 
 /* Estilos para modais aninhados */
 :host {
   position: relative;
   z-index: inherit;
-}
-
-.member-info {
-  margin-bottom: 20px;
-}
-
-.info-group {
-  margin-bottom: 12px;
-}
-
-.info-group label {
-  font-weight: 600;
-  margin-right: 8px;
-}
-
-.edit-form {
-  margin-bottom: 20px;
-}
-
-.form-group {
-  margin-bottom: 15px;
-}
-
-.form-actions {
-  display: flex;
-  gap: 10px;
-  justify-content: flex-end;
-  border-top: 1px solid #eee;
-  padding-top: 15px;
 }

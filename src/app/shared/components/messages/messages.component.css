@@ -245,16 +245,16 @@
 /* Dark theme support */
 @media (prefers-color-scheme: dark) {
   .message {
-    background: #1e293b;
-    color: #f1f5f9;
+    background: var(--text-primary);
+    color: var(--text-white);
   }
   
   .message-title {
-    color: #f1f5f9;
+    color: var(--text-white);
   }
   
   .message-text {
-    color: #94a3b8;
+    color: var(--text-light);
   }
   
   .message-close:hover {
@@ -262,12 +262,12 @@
   }
   
   .message-action {
-    background: #334155;
-    border-color: #475569;
-    color: #f1f5f9;
+    background: var(--secondary-color);
+    border-color: var(--border-color);
+    color: var(--text-white);
   }
   
   .message-action:hover {
-    background: #475569;
+    background: var(--text-secondary);
   }
 }

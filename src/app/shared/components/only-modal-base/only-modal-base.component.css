@@ -168,9 +168,10 @@
 }
 
 .modal-button-danger:hover {
-  background: #dc2626;
-  border-color: #dc2626;
+  background: var(--error-color);
+  border-color: var(--error-color);
   transform: translateY(-1px);
+  filter: brightness(0.9);
 }
 
 /* Modal sizes */
