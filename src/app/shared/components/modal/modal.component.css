@@ -1,20 +1,19 @@
 .modal-container {
   position: fixed;
-  top: 50vh;
-  left: 50vw;
-  width: 90vw;
-  height: 90vh;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
   background-color: var(--bg-overlay);
   display: flex;
   justify-content: center;
   align-items: center;
   backdrop-filter: blur(1px);
-  translate: -50% -50%;
 }
 
 .modal-container.nested-modal {
-  background-color: rgba(0, 0, 0, 0.2);
-  backdrop-filter: blur(2px);
+  background-color: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(3px);
 }
 
 .modal-box {
@@ -30,8 +29,9 @@
 }
 
 .nested-modal .modal-box {
-  box-shadow: var(--shadow-xl);
-  transform: scale(0.98);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  transform: scale(1);
+  border: 2px solid var(--border-color);
 }
 
 /* Animação de entrada */

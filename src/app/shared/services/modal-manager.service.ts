@@ -11,7 +11,7 @@ export class ModalManagerService {
 
   openModal(): number {
     this.currentLevel++;
-    const zIndex = this.baseZIndex + (this.currentLevel * 10);
+    const zIndex = this.baseZIndex + (this.currentLevel * 100);
     this.modalStack.push(zIndex);
     return zIndex;
   }
