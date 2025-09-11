@@ -20,7 +20,6 @@ import { ModalManagerService } from '../../shared/services/modal-manager.service
     CommonModule,
     ModalComponent,
     FormsModule,
-    OrganizationMembersComponent,
   ],
   templateUrl: './see-organization.component.html',
   styleUrl: './see-organization.component.css',

@@ -10,6 +10,8 @@ import { Paginator } from '../shared/types/api';
 import { TableData } from '../shared/components/custom-table/types';
 import { ModalComponent } from '../shared/components/modal/modal.component';
 import { ModalManagerService } from '../shared/services/modal-manager.service';
+import { MessagesService } from '../shared/services/messages.service';
+import { LoaderService } from '../shared/services/loader.service';
 
 export interface Modal {
   component: any;
@@ -60,7 +62,7 @@ export class OrganizationMembersComponent implements OnInit {
     private membersService: OrganizationMembersService,
     private messagesService: MessagesService,
     private loaderService: LoaderService,
-    private modalManager: ModalManagerService,
+    private modalService: ModalManagerService,
     private injector: Injector
   ) {
     this.loadMembers();
@@ -124,13 +126,12 @@ export class OrganizationMembersComponent implements OnInit {
   }
 
   closeCreateModal() {
-    this.showCreateModal = false;
     this.loadMembers();
   }
 
   openEditModal(member: OrganizationMember) {
     this.selectedMember = member;
-    this.showCreateModal = true;
+    this.openCreateModal(); // Changed to openCreateModal to reuse the same modal logic
   }
 
   onMemberCreated() {

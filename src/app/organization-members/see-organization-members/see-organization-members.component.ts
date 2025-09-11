@@ -74,10 +74,7 @@ export class SeeOrganizationMembersComponent implements OnChanges {
     this.isUpdating = true;
     this.membersService.updateMember(this.editableMember).subscribe({
       next: () => {
-        this.messagesService.addMessage({
-          type: 'success',
-          text: 'Membro atualizado com sucesso!',
-        });
+        console.log('Membro atualizado com sucesso!');
         this.onUpdate();
         this.close();
       },

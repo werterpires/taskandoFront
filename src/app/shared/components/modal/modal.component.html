@@ -1,11 +1,11 @@
 
 <div 
-  class="modal-container" 
-  [ngStyle]="{ zIndex: dynamicZIndex }"
+  class="modal-overlay"
+  [ngStyle]="{ 'z-index': dynamicZIndex }"
   [class.nested-modal]="dynamicZIndex > 1000"
   (click)="$event.target === $event.currentTarget && close()"
 >
-  <div class="modal-box" (click)="$event.stopPropagation()">
+  <div class="modal-container" (click)="$event.stopPropagation()">
     <ng-content></ng-content>
   </div>
 </div>
