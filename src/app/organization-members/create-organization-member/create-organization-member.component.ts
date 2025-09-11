@@ -8,7 +8,7 @@ import { OrganizationMembersService } from '../organization-members.service';
 
 @Component({
   selector: 'app-create-organization-member',
-  imports: [CommonModule, ModalComponent, FormsModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './create-organization-member.component.html',
   styleUrl: './create-organization-member.component.css',
 })
