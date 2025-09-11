@@ -1,4 +1,4 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, OnInit, Input, Injector, ComponentRef, ViewContainerRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CustomTableComponent } from '../shared/components/custom-table/custom-table.component';
@@ -8,6 +8,14 @@ import { OrganizationMembersService } from './organization-members.service';
 import { OrganizationMember } from './types';
 import { Paginator } from '../shared/types/api';
 import { TableData } from '../shared/components/custom-table/types';
+import { ModalComponent } from '../shared/components/modal/modal.component';
+import { ModalManagerService } from '../shared/services/modal-manager.service';
+
+export interface Modal {
+  component: any;
+  injector: Injector;
+  id: string;
+}
 
 @Component({
   selector: 'app-organization-members',
@@ -17,6 +25,7 @@ import { TableData } from '../shared/components/custom-table/types';
     CustomTableComponent,
     CreateOrganizationMemberComponent,
     SeeOrganizationMembersComponent,
+    ModalComponent,
   ],
   templateUrl: './organization-members.component.html',
   styleUrl: './organization-members.component.css',
@@ -25,7 +34,6 @@ export class OrganizationMembersComponent implements OnInit {
   @Input() orgId!: number;
   members: OrganizationMember[] = [];
   isLoading = false;
-  showCreateModal = false;
   selectedMember: OrganizationMember | null = null;
   paginator: Paginator = {
     limit: 10,
@@ -34,6 +42,7 @@ export class OrganizationMembersComponent implements OnInit {
     direction: 'ASC',
   };
   totalItems = 0;
+  modals: Modal[] = [];
 
   tableData: TableData<OrganizationMember> = {
     data: [],
@@ -47,7 +56,16 @@ export class OrganizationMembersComponent implements OnInit {
     ],
   };
 
-  constructor(private membersService: OrganizationMembersService) {}
+  constructor(
+    private membersService: OrganizationMembersService,
+    private messagesService: MessagesService,
+    private loaderService: LoaderService,
+    private modalManager: ModalManagerService,
+    private injector: Injector
+  ) {
+    this.loadMembers();
+    console.log('Organization ID:', this.orgId);
+  }
 
   ngOnInit() {
     this.loadMembers();
@@ -87,13 +105,27 @@ export class OrganizationMembersComponent implements OnInit {
   }
 
   openCreateModal() {
-    this.selectedMember = null;
-    this.showCreateModal = true;
+    const modalId = 'create-member-' + Date.now();
+    const injector = Injector.create({
+      providers: [
+        { provide: 'orgId', useValue: this.orgId },
+        { provide: 'closeCallback', useValue: () => this.closeModal({ id: modalId } as Modal) }
+      ],
+      parent: this.injector
+    });
+
+    const modal: Modal = {
+      component: CreateOrganizationMemberComponent,
+      injector: injector,
+      id: modalId
+    };
+
+    this.modals.push(modal);
   }
 
   closeCreateModal() {
     this.showCreateModal = false;
-    this.loadMembers(); // Reload members after closing the modal
+    this.loadMembers();
   }
 
   openEditModal(member: OrganizationMember) {
@@ -109,11 +141,26 @@ export class OrganizationMembersComponent implements OnInit {
     this.loadMembers();
   }
 
-  onSeeMember(index: number) {
-    const member = this.members[index];
+  onSeeMember(memberId: number) {
+    const member = this.tableData.data.find((m) => m.id === memberId);
     if (member) {
-      this.selectedMember = member;
-      this.showCreateModal = false;
+      const modalId = 'see-member-' + Date.now();
+      const injector = Injector.create({
+        providers: [
+          { provide: 'member', useValue: member },
+          { provide: 'closeCallback', useValue: () => this.closeModal({ id: modalId } as Modal) },
+          { provide: 'updateCallback', useValue: () => this.onMemberUpdated() }
+        ],
+        parent: this.injector
+      });
+
+      const modal: Modal = {
+        component: SeeOrganizationMembersComponent,
+        injector: injector,
+        id: modalId
+      };
+
+      this.modals.push(modal);
     }
   }
 
@@ -138,5 +185,11 @@ export class OrganizationMembersComponent implements OnInit {
 
   closeMemberModal() {
     this.selectedMember = null;
+    this.loadMembers();
+  }
+
+  closeModal(modal: Modal) {
+    this.modals = this.modals.filter(m => m.id !== modal.id);
+    this.loadMembers();
   }
 }

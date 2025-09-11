@@ -5,6 +5,8 @@ import {
   EventEmitter,
   OnChanges,
   SimpleChanges,
+  Inject,
+  Optional,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -33,8 +35,15 @@ export class SeeOrganizationMembersComponent implements OnChanges {
 
   constructor(
     private membersService: OrganizationMembersService,
-    private modalManager: ModalManagerService
-  ) {}
+    private modalManager: ModalManagerService,
+    @Optional() @Inject('member') private injectedMember?: OrganizationMember,
+    @Optional() @Inject('closeCallback') private closeCallback?: () => void,
+    @Optional() @Inject('updateCallback') private updateCallback?: () => void
+  ) {
+    if (this.injectedMember) {
+      this.member = this.injectedMember;
+    }
+  }
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['member'] && this.member) {
@@ -65,8 +74,12 @@ export class SeeOrganizationMembersComponent implements OnChanges {
     this.isUpdating = true;
     this.membersService.updateMember(this.editableMember).subscribe({
       next: () => {
-        this.updateEmitter.emit();
-        this.isUpdating = false;
+        this.messagesService.addMessage({
+          type: 'success',
+          text: 'Membro atualizado com sucesso!',
+        });
+        this.onUpdate();
+        this.close();
       },
       error: (error) => {
         console.error('Error updating member:', error);
@@ -88,7 +101,19 @@ export class SeeOrganizationMembersComponent implements OnChanges {
   }
 
   close() {
-    this.closeEmitter.emit();
+    if (this.closeCallback) {
+      this.closeCallback();
+    } else {
+      this.closeEmitter.emit();
+    }
+  }
+
+  onUpdate() {
+    if (this.updateCallback) {
+      this.updateCallback();
+    } else {
+      this.updateEmitter.emit();
+    }
   }
 
   getRoleDescription(role: UserRoleEnum): string {

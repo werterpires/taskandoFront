@@ -2,7 +2,7 @@
 <div class="organization-members-container">
   <h1>Membros da Organização</h1>
 
-  <div class="table-container" *ngIf="!showCreateModal && !selectedMember">
+  <div class="table-container">
     <app-custom-table
       [tableData]="tableData"
       [totalItems]="totalItems"
@@ -18,18 +18,10 @@
     </app-custom-table>
   </div>
 
-  <app-create-organization-member
-    *ngIf="showCreateModal"
-    [orgId]="orgId"
-    (closeEmitter)="closeCreateModal()"
-  >
-  </app-create-organization-member>
-
-  <app-see-organization-members
-    *ngIf="selectedMember"
-    [member]="selectedMember"
-    (closeEmitter)="closeMemberModal()"
-    (updateEmitter)="onMemberUpdated()"
-  >
-  </app-see-organization-members>
+  <!-- Modais dinâmicos -->
+  <div *ngFor="let modal of modals">
+    <app-modal (closeEmitter)="closeModal(modal)">
+      <ng-container *ngComponentOutlet="modal.component; injector: modal.injector"></ng-container>
+    </app-modal>
+  </div>
 </div>
