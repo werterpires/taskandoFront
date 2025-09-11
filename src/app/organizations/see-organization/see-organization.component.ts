@@ -12,6 +12,7 @@ import { Organization, UpdateOrganizationDto } from '../types';
 import { ModalComponent } from '../../shared/components/modal/modal.component';
 import { OrganizationsService } from '../organizations.service';
 import { OrganizationMembersComponent } from '../../organization-members/organization-members.component';
+import { ModalManagerService } from '../../shared/services/modal-manager.service';
 
 @Component({
   selector: 'app-see-organization',
@@ -34,7 +35,10 @@ export class SeeOrganizationComponent implements OnChanges {
   hasChanges = false;
   isUpdating = false;
 
-  constructor(private organizationsService: OrganizationsService) {}
+  constructor(
+    private organizationsService: OrganizationsService,
+    private modalManager: ModalManagerService
+  ) {}
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['organization'] && this.organization) {

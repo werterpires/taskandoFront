@@ -12,6 +12,7 @@ import { OrganizationMember, UpdateMemberDto } from '../types';
 import { ModalComponent } from '../../shared/components/modal/modal.component';
 import { OrganizationMembersService } from '../organization-members.service';
 import { UserRoleEnum, userRoles } from '../../shared/types/roles.enum';
+import { ModalManagerService } from '../../shared/services/modal-manager.service';
 
 @Component({
   selector: 'app-see-organization-members',
@@ -30,7 +31,10 @@ export class SeeOrganizationMembersComponent implements OnChanges {
   isUpdating = false;
   availableRoles = userRoles;
 
-  constructor(private membersService: OrganizationMembersService) {}
+  constructor(
+    private membersService: OrganizationMembersService,
+    private modalManager: ModalManagerService
+  ) {}
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['member'] && this.member) {

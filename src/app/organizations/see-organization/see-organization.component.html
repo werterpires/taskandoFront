@@ -1,4 +1,4 @@
-<app-modal>
+<app-modal (closeEmitter)="close()">
   <div class="organization-details" *ngIf="editableOrganization">
     <div class="header">
       <h2>Detalhes da Organização</h2>
