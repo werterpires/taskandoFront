@@ -35,6 +35,17 @@ export class GlobalErrorHandlerService implements HttpInterceptor {
           
           // Redireciona para a página de login
           this.router.navigate(['/login']);
+        } else if (error.status === 400 && error.error?.error?.name === 'BadRequestException') {
+          // Erro de validação do backend
+          this.messagesService.show({
+            type: 'error',
+            title: 'Ação não realizada',
+            description: [
+              'Não foi possível realizar a ação solicitada.',
+              'Por favor, entre em contato com o pessoal de desenvolvimento.'
+            ],
+            show: true
+          });
         } else {
           // Outros erros podem ser tratados aqui
           this.messagesService.show({
