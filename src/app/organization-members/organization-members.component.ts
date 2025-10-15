@@ -10,8 +10,6 @@ import { Paginator } from '../shared/types/api';
 import { TableData } from '../shared/components/custom-table/types';
 import { ModalComponent } from '../shared/components/modal/modal.component';
 import { ModalManagerService } from '../shared/services/modal-manager.service';
-import { MessagesService } from '../shared/services/messages.service';
-import { LoaderService } from '../shared/services/loader.service';
 
 export interface Modal {
   component: any;
@@ -25,7 +23,6 @@ export interface Modal {
     CommonModule,
     FormsModule,
     CustomTableComponent,
-    CreateOrganizationMemberComponent,
     SeeOrganizationMembersComponent,
     ModalComponent,
   ],
@@ -60,8 +57,6 @@ export class OrganizationMembersComponent implements OnInit {
 
   constructor(
     private membersService: OrganizationMembersService,
-    private messagesService: MessagesService,
-    private loaderService: LoaderService,
     private modalService: ModalManagerService,
     private injector: Injector
   ) {
@@ -111,15 +106,18 @@ export class OrganizationMembersComponent implements OnInit {
     const injector = Injector.create({
       providers: [
         { provide: 'orgId', useValue: this.orgId },
-        { provide: 'closeCallback', useValue: () => this.closeModal({ id: modalId } as Modal) }
+        {
+          provide: 'closeCallback',
+          useValue: () => this.closeModal({ id: modalId } as Modal),
+        },
       ],
-      parent: this.injector
+      parent: this.injector,
     });
 
     const modal: Modal = {
       component: CreateOrganizationMemberComponent,
       injector: injector,
-      id: modalId
+      id: modalId,
     };
 
     this.modals.push(modal);
@@ -143,22 +141,25 @@ export class OrganizationMembersComponent implements OnInit {
   }
 
   onSeeMember(memberId: number) {
-    const member = this.tableData.data.find((m) => m.id === memberId);
+    const member = this.tableData.data.find((m) => m.userId === memberId);
     if (member) {
       const modalId = 'see-member-' + Date.now();
       const injector = Injector.create({
         providers: [
           { provide: 'member', useValue: member },
-          { provide: 'closeCallback', useValue: () => this.closeModal({ id: modalId } as Modal) },
-          { provide: 'updateCallback', useValue: () => this.onMemberUpdated() }
+          {
+            provide: 'closeCallback',
+            useValue: () => this.closeModal({ id: modalId } as Modal),
+          },
+          { provide: 'updateCallback', useValue: () => this.onMemberUpdated() },
         ],
-        parent: this.injector
+        parent: this.injector,
       });
 
       const modal: Modal = {
         component: SeeOrganizationMembersComponent,
         injector: injector,
-        id: modalId
+        id: modalId,
       };
 
       this.modals.push(modal);
@@ -190,7 +191,7 @@ export class OrganizationMembersComponent implements OnInit {
   }
 
   closeModal(modal: Modal) {
-    this.modals = this.modals.filter(m => m.id !== modal.id);
+    this.modals = this.modals.filter((m) => m.id !== modal.id);
     this.loadMembers();
   }
 }

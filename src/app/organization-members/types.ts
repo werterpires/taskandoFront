@@ -10,18 +10,18 @@ export interface CreateInviteDto {
 
 export interface UpdateMemberDto {
   role: UserRoleEnum;
-  userId: string;
-  orgId: string;
+  userId: number;
+  orgId: number;
   active: boolean;
 }
 
 export interface CreateOrganizationMemberDto {
   email: string;
   role: UserRoleEnum;
-  orgId: string;
+  orgId: number;
 }
 
-export interface OrganizationMember extends createOrganizationMember, User {
+export interface OrganizationMember extends CreateOrganizationMemberDto, User {
   organization?: Organization;
   active?: boolean;
 }
