@@ -1,0 +1,63 @@
+<app-modal (closeEmitter)="close()">
+  <div class="department-details" *ngIf="editableDepartment">
+    <div class="header">
+      <h2>Detalhes do Departamento</h2>
+      <button class="close-btn" (click)="close()">×</button>
+    </div>
+
+    <div class="content">
+      <div class="field-group" *ngIf="editableDepartment.owner">
+        <label>Proprietário:</label>
+        <div class="owner-info">
+          <p>
+            <strong>Nome:</strong> {{ editableDepartment.owner.firstName }}
+            {{ editableDepartment.owner.lastName }}
+          </p>
+          <p><strong>Email:</strong> {{ editableDepartment.owner.email }}</p>
+        </div>
+      </div>
+      <div class="fields-container">
+        <div class="field-group">
+          <label>Nome:</label>
+          <input
+            type="text"
+            class="editable-field"
+            [(ngModel)]="editableDepartment.name"
+            (ngModelChange)="onFieldChange()"
+            placeholder="Digite o nome do departamento"
+          />
+        </div>
+
+        <div class="field-group" *ngIf="editableDepartment.organization">
+          <label>Organização:</label>
+          <div class="org-info">
+            <p><strong>Nome:</strong> {{ editableDepartment.organization.name }}</p>
+            <p *ngIf="editableDepartment.organization.cnpj"><strong>CNPJ:</strong> {{ editableDepartment.organization.cnpj }}</p>
+            <p *ngIf="editableDepartment.organization.address"><strong>Endereço:</strong> {{ editableDepartment.organization.address }}</p>
+            <p *ngIf="editableDepartment.organization.phone"><strong>Telefone:</strong> {{ editableDepartment.organization.phone }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button
+        *ngIf="hasChanges"
+        class="btn-primary"
+        (click)="saveChanges()"
+        [disabled]="isUpdating"
+      >
+        {{ isUpdating ? "Salvando..." : "Salvar" }}
+      </button>
+      <button
+        *ngIf="hasChanges"
+        class="btn-tertiary"
+        (click)="cancelChanges()"
+        [disabled]="isUpdating"
+      >
+        Cancelar
+      </button>
+      <button class="btn-secondary" (click)="close()">Fechar</button>
+    </div>
+  </div>
+</app-modal>

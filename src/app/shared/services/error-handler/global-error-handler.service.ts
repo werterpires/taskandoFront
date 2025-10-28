@@ -48,14 +48,21 @@ export class GlobalErrorHandlerService implements HttpInterceptor {
           });
         } else {
           // Outros erros podem ser tratados aqui
+          // Verifica se existe uma mensagem específica do backend que começa com #
+          const backendMessage =
+            error.error?.error?.message || error.error?.message;
+          const shouldShowBackendMessage =
+            backendMessage && backendMessage.startsWith('#');
+
           this.messagesService.show({
             type: 'error',
             title: 'Erro',
             description: [
-              error?.error?.message || 'Ocorreu um erro inesperado.',
-              'Por favor, tente novamente.'
+              shouldShowBackendMessage
+                ? backendMessage
+                : 'Ocorreu um erro inesperado. Por favor, tente novamente.',
             ],
-            show: true
+            show: true,
           });
         }
         

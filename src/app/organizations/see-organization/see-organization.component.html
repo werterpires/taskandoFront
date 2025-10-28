@@ -65,6 +65,12 @@
 
     <div class="actions">
       <button
+        class="btn-add-department"
+        (click)="openCreateDepartment()"
+      >
+        + Adicionar Departamento
+      </button>
+      <button
         *ngIf="hasChanges"
         class="btn-primary"
         (click)="saveChanges()"
@@ -86,5 +92,36 @@
     <app-organization-members
       [orgId]="organization?.orgId || 0"
     ></app-organization-members>
+
+    <div class="departments-table" *ngIf="editableOrganization">
+      <h3>Departamentos</h3>
+      <app-custom-table
+        [tableData]="departmentsTable"
+        [totalItems]="departmentsTotal"
+        [loading]="departmentsLoading"
+        [invite]="false"
+        [del]="false"
+        [seee]="false"
+        (paginationChangeEmitter)="onDepartmentsPagination($event)"
+      >
+      </app-custom-table>
+    </div>
+  </div>
+
+  <!-- Modal for creating department -->
+  <div *ngIf="showCreateDepartment" class="create-department-modal">
+    <app-creating-form
+      title="Adicionar Departamento à Organização"
+      (closeEmitter)="closeCreateDepartment()"
+      (actionEmitter)="createDepartment()"
+    >
+      <app-custom-input
+        label="Nome do Departamento *"
+        type="text"
+        placeholder="Digite o nome do departamento"
+        [(ngModel)]="createDepartmentDto.name"
+      >
+      </app-custom-input>
+    </app-creating-form>
   </div>
 </app-modal>

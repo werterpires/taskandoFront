@@ -19,13 +19,7 @@ export interface Modal {
 
 @Component({
   selector: 'app-organization-members',
-  imports: [
-    CommonModule,
-    FormsModule,
-    CustomTableComponent,
-    SeeOrganizationMembersComponent,
-    ModalComponent,
-  ],
+  imports: [CommonModule, FormsModule, CustomTableComponent, ModalComponent],
   templateUrl: './organization-members.component.html',
   styleUrl: './organization-members.component.css',
 })

@@ -1,0 +1,15 @@
+<app-modal>
+  <app-creating-form
+    title="Novo Departamento"
+    (closeEmitter)="close()"
+    (actionEmitter)="createDepartment()"
+  >
+    <app-custom-input
+      label="Nome *"
+      type="text"
+      placeholder="Digite o nome do departamento"
+      [(ngModel)]="createDepartmentDto.name"
+    >
+    </app-custom-input>
+  </app-creating-form>
+</app-modal>
