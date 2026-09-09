@@ -1,99 +1,51 @@
 {
-  "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
   "version": 1,
-  "newProjectRoot": "projects",
+  "cli": {
+    "analytics": false
+  },
   "projects": {
-    "taskandoFront": {
+    "taskando": {
       "projectType": "application",
-      "schematics": {},
       "root": "",
       "sourceRoot": "src",
-      "prefix": "app",
       "architect": {
         "build": {
-          "builder": "@angular-devkit/build-angular:application",
+          "builder": "@angular/build:application",
           "options": {
-            "outputPath": "dist/taskando-front",
-            "index": "src/index.html",
             "browser": "src/main.ts",
-            "polyfills": [
-              "zone.js"
-            ],
+            "index": "src/index.html",
             "tsConfig": "tsconfig.app.json",
+            "styles": [
+              "src/styles.css"
+            ],
             "assets": [
               {
                 "glob": "**/*",
                 "input": "public"
               }
             ],
-            "styles": [
-              "src/styles.css"
-            ],
-            "scripts": []
+            "outputPath": "dist/taskando"
           },
           "configurations": {
             "production": {
+              "outputHashing": "all",
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "500kB",
-                  "maximumError": "1MB"
-                },
-                {
-                  "type": "anyComponentStyle",
-                  "maximumWarning": "4kB",
-                  "maximumError": "8kB"
+                  "maximumWarning": "900kB",
+                  "maximumError": "1.5MB"
                 }
-              ],
-              "outputHashing": "all"
-            },
-            "development": {
-              "optimization": false,
-              "extractLicenses": false,
-              "sourceMap": true
+              ]
             }
-          },
-          "defaultConfiguration": "production"
+          }
         },
         "serve": {
-          "builder": "@angular-devkit/build-angular:dev-server",
-          "configurations": {
-            "production": {
-              "buildTarget": "taskandoFront:build:production"
-            },
-            "development": {
-              "buildTarget": "taskandoFront:build:development"
-            }
-          },
-          "defaultConfiguration": "development"
-        },
-        "extract-i18n": {
-          "builder": "@angular-devkit/build-angular:extract-i18n"
-        },
-        "test": {
-          "builder": "@angular-devkit/build-angular:karma",
+          "builder": "@angular/build:dev-server",
           "options": {
-            "polyfills": [
-              "zone.js",
-              "zone.js/testing"
-            ],
-            "tsConfig": "tsconfig.spec.json",
-            "assets": [
-              {
-                "glob": "**/*",
-                "input": "public"
-              }
-            ],
-            "styles": [
-              "src/styles.css"
-            ],
-            "scripts": []
+            "buildTarget": "taskando:build"
           }
         }
       }
     }
-  },
-  "cli": {
-    "analytics": false
   }
 }

@@ -1,59 +1,16 @@
-# TaskandoFront
+# Taskando Web
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.2.6.
-
-## Development server
-
-To start a local development server, run:
+Interface Angular standalone do Taskando. Ela recria a experiência visual da exportação em `Taskando-completo` e consome os mesmos contratos da nova API NestJS.
 
 ```bash
-ng serve
+npm install
+npm run dev
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
-
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+O servidor local abre em `http://localhost:4200` e encaminha `/api` e `/mcp` para `http://127.0.0.1:3000`. Antes de entrar com Google, inicie a API, o PostgreSQL e aplique as migrations descritas no README de `taskando-back`.
 
 ```bash
-ng generate component component-name
+npm run build
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
-
-```bash
-ng generate --help
-```
-
-## Building
-
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+A interface cobre tarefas e seus nove tipos, subtarefas, checklist, comentários, listas pessoais, calendário, Kanban, quadrante, estrutura, projetos, frentes, produtos, processos, fases, dependências, templates, recorrência, cíclicas, lembretes, notificações, papéis, transferências de Owner, configurações e MCP.
