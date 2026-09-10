@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy, computed, inject, signal } from '@angular
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiError, ApiService, Item } from './api.service';
+import { environment } from '../environments/environment';
 
 const paths: Record<string, string> = { task: 'tasks', project: 'projects', front: 'fronts', product: 'products', process: 'processes', phase: 'phases', organization: 'organizations', list: 'lists', reminder: 'reminders', series: 'recurrence-series' };
 @Component({ selector: 'app-root', standalone: true, imports: [CommonModule, FormsModule], templateUrl: './app.component.html' })
@@ -37,7 +38,7 @@ export class AppComponent implements OnInit, OnDestroy {
     { key: 'scheduledEnabled', label: 'Avisar antes de tarefas agendadas' },
     { key: 'reminderEnabled', label: 'Exibir lembretes no aplicativo' },
   ];
-  readonly mcpUrl = `${location.origin}/api/integrations/mcp`;
+  readonly mcpUrl = `${environment.apiBaseUrl || location.origin}/api/integrations/mcp`;
   templateSetup = signal<Item | null>(null); templateTarget = '0'; templateTitle = ''; templateDate = '';
   decision = signal<{ title: string; options: { value:string; label:string }[]; resolve:(v:string|null)=>void } | null>(null);
   private timer?: ReturnType<typeof setInterval>; private requestVersion = 0;
