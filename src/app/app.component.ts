@@ -9,6 +9,9 @@ export class AppComponent implements OnInit, OnDestroy {
   api = inject(ApiService);
   user = signal<Item | null>(null); authenticating = signal(true); loading = signal(false); saving = signal(false);
   error = signal(''); notice = signal(''); section = signal('Início'); mobile = signal(false);
+  loginEmail = ''; loginPassword = '';
+  newUserDisplayName = ''; newUserEmail = ''; newUserPassword = '';
+  currentPassword = ''; newPassword = '';
   navigation = ['Início', 'Minhas tarefas', 'Cíclicas', 'Lembretes', 'Calendário', 'Quadrante', 'Painel', 'Relatórios', 'Listas', 'Projetos', 'Produtos', 'Processos', 'Séries', 'Templates', 'Estrutura', 'Lixeira', 'Configurações'];
   icons = ['⌂','✓','↻','♧','▦','⊞','◷','▤','☷','◇','◈','⇢','⟳','▧','⌘','♲','⚙'];
   statuses: Record<string,string> = { planned:'Planejado', todo:'A fazer', in_progress:'Em execução', awaiting_approval:'Aguardando aprovação', completed:'Concluído', cancelled:'Cancelado', archived:'Arquivado', active:'Ativo', inactive:'Inativo' };
@@ -89,7 +92,6 @@ export class AppComponent implements OnInit, OnDestroy {
     try { const data = await this.api.request('auth/me'); this.user.set(data.user); await this.bootstrap(); }
     catch (e) { if (!(e instanceof ApiError && e.status === 401)) this.fail(e); }
     finally { this.authenticating.set(false); }
-    if (new URLSearchParams(location.search).has('login')) this.error.set('Não foi possível entrar com Google. Tente novamente.');
   }
   ngOnDestroy() { if (this.timer) clearInterval(this.timer); }
   async bootstrap() { await this.reloadNavigation(); await this.load(); await this.poll(); this.timer = setInterval(() => void this.poll(), 30_000); }
@@ -142,6 +144,18 @@ export class AppComponent implements OnInit, OnDestroy {
   contextRows(data: Record<string,any>) { return ['departments','teams','projects','products','processes','tasks'].flatMap(key=>this.mark(data[key],({departments:'department',teams:'team',projects:'project',products:'product',processes:'process',tasks:'task'} as Record<string,string>)[key])); }
   fail(e:unknown) { this.error.set(e instanceof Error ? e.message : 'Não foi possível concluir a operação.'); }
   async run(action:()=>Promise<void>) { if(this.saving()) return; this.saving.set(true);this.error.set('');try { await action(); } catch(e) { this.fail(e); } finally { this.saving.set(false); } }
+  async authenticate() { await this.run(async()=>{
+    const data=await this.api.request('auth/login','POST',{email:this.loginEmail,password:this.loginPassword});
+    this.loginPassword='';this.user.set(data.user);await this.bootstrap();
+  }); }
+  async createUser() { await this.run(async()=>{
+    await this.api.request('auth/users','POST',{displayName:this.newUserDisplayName,email:this.newUserEmail,password:this.newUserPassword});
+    this.newUserDisplayName='';this.newUserEmail='';this.newUserPassword='';this.notice.set('Usuário criado. Informe a senha inicial à pessoa.');
+  }); }
+  async changePassword() { await this.run(async()=>{
+    await this.api.request('auth/password','PATCH',{currentPassword:this.currentPassword,newPassword:this.newPassword});
+    this.currentPassword='';this.newPassword='';this.notice.set('Senha alterada.');
+  }); }
   async logout() { await this.run(async()=>{await this.api.request('auth/logout','POST',{});this.user.set(null);this.ngOnDestroy();}); }
   localDate(date:Date) { return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`; }
   title(row:Item) { return row.title ?? row.name ?? ''; }

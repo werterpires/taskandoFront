@@ -164,8 +164,9 @@ legend { color: #506355; font-weight: 800; }
 .login-card .brand { text-align: left; padding: 0; }
 .login-card h1 { margin: 0; color: #304737; font: 700 clamp(36px, 5vw, 60px)/1.08 Georgia, serif; letter-spacing: -2px; }
 .login-card > p { color: var(--muted); }
-.google { margin-top: 10px; padding: 13px; }
-.google b { display: grid; width: 24px; height: 24px; place-items: center; border-radius: 50%; background: white; color: #4285f4; }
+.auth-form { display: grid; gap: 13px; margin-top: 4px; }
+.auth-form .primary { margin-top: 5px; padding: 13px; }
+.panel form { display: grid; gap: 12px; }
 .login-art { display: grid; min-height: 100vh; width: 100%; place-items: center; align-content: center; background: #e5eee2; color: #48614c; font: 700 24px Georgia, serif; }
 .login-art span { font-size: 100px; color: #729076; }
 .login-art i { color: #788a7b; font-size: 16px; }

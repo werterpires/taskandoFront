@@ -42,7 +42,8 @@
         "serve": {
           "builder": "@angular/build:dev-server",
           "options": {
-            "buildTarget": "taskando:build"
+            "buildTarget": "taskando:build",
+            "proxyConfig": "proxy.conf.json"
           }
         }
       }

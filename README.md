@@ -7,7 +7,7 @@ npm install
 npm run dev
 ```
 
-O servidor local abre em `http://localhost:4200` e encaminha `/api` e `/mcp` para `http://127.0.0.1:3000`. Antes de entrar com Google, inicie a API, o PostgreSQL e aplique as migrations descritas no README de `taskando-back`.
+O servidor local abre em `http://localhost:4200` e encaminha `/api` e `/mcp` para `http://127.0.0.1:3000`. Antes de entrar com e-mail e senha, inicie a API, o PostgreSQL, aplique as migrations e crie o usuário inicial com a seed descrita no README de `taskando-back`. Novos usuários são criados por alguém autenticado na tela de configurações.
 
 ```bash
 npm run build
