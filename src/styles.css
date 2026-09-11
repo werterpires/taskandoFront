@@ -69,6 +69,11 @@ textarea { resize: vertical; }
 input:focus, select:focus, textarea:focus { outline: 2px solid #9eb6a1; outline-offset: 1px; }
 .search { width: 190px; }
 .item-list { min-height: 300px; }
+.home-group + .home-group { border-top: 1px solid var(--line); }
+.home-group .item-list { min-height: 0; }
+.home-group-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px 18px 10px; color: var(--muted); }
+.home-group-heading h2 { margin: 0; color: #405945; font-size: 14px; }
+.home-group-heading span { font-size: 11px; font-weight: 700; }
 .list-heading, .item-row { display: grid; grid-template-columns: minmax(260px, 1fr) 145px 150px 75px auto; align-items: center; gap: 12px; padding: 12px 18px; }
 .list-heading { color: #8a958c; background: #fafbf9; font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 .item-row { border-top: 1px solid #edf0ec; }

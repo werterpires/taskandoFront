@@ -57,6 +57,22 @@ export class AppComponent implements OnInit, OnDestroy {
     }
     return true;
   }));
+  readonly homeGroupDefinitions = [
+    { kind: 'organization', label: 'Organizações' },
+    { kind: 'department', label: 'Departamentos' },
+    { kind: 'team', label: 'Times' },
+    { kind: 'project', label: 'Projetos' },
+    { kind: 'product', label: 'Produtos' },
+    { kind: 'process', label: 'Processos' },
+    { kind: 'task', label: 'Tarefas' },
+  ];
+  homeGroups = computed(() => {
+    if (this.section() !== 'Início') return [];
+    return this.homeGroupDefinitions.map(group => ({
+      ...group,
+      rows: this.visible().filter(row => row.kind === group.kind),
+    })).filter(group => group.rows.length);
+  });
   openCount = computed(() => this.tasks().filter(t => !['completed','cancelled','archived'].includes(t['status'])).length);
   completedCount = computed(() => this.tasks().filter(t => t['status'] === 'completed').length);
   dashboard = computed(() => {
