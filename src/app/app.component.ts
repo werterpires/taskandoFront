@@ -42,10 +42,11 @@ export class AppComponent implements OnInit, OnDestroy {
   templateSetup = signal<Item | null>(null); templateTarget = '0'; templateTitle = ''; templateDate = '';
   decision = signal<{ title: string; options: { value:string; label:string }[]; resolve:(v:string|null)=>void } | null>(null);
   private timer?: ReturnType<typeof setInterval>; private requestVersion = 0;
+  taskCollection = computed(() => this.section() === 'Minhas tarefas' || this.scope()?.kind === 'list');
   visible = computed(() => this.rows().filter(row => {
     const q = this.search().toLocaleLowerCase();
     if (q && !`${row.title ?? row.name} ${row['description'] ?? ''}`.toLocaleLowerCase().includes(q)) return false;
-    if (row.kind === 'task') {
+    if (row.kind === 'task' && this.taskCollection()) {
       if (this.filter() === 'open' && ['completed','cancelled','archived'].includes(row['status'])) return false;
       if (this.filter() === 'completed' && row['status'] !== 'completed') return false;
       const date = row['dueDate'] ?? row['dateAt'] ?? row['startAt']?.slice(0,10);
@@ -120,9 +121,10 @@ export class AppComponent implements OnInit, OnDestroy {
       } else if (section === 'Painel') {
         const [matrix, taskData] = await Promise.all([this.api.request('priority-matrix'), this.api.request('tasks')]);
         this.tasks.set(this.mark(taskData.tasks,'task')); rows = matrix.items ?? [];
-      } else if (['Início','Minhas tarefas','Relatórios'].includes(section)) {
+      } else if (section === 'Início') {
+        rows = this.contextRows(await this.api.request('context?parentType=root'));
+      } else if (['Minhas tarefas','Relatórios'].includes(section)) {
         const data = await this.api.request('tasks'); this.tasks.set(this.mark(data.tasks,'task')); rows = this.tasks();
-        if (section === 'Início') rows = rows.filter(t => t['pinnedForToday'] || [t['dueDate'],t['dateAt'],t['startAt']?.slice(0,10)].includes(this.localDate(new Date())));
       } else if (section === 'Calendário') {
         const from = this.calendarDays()[0].key, to = this.calendarDays()[41].key;
         await this.api.request('recurrence-series/materialize-window','POST',{from,to});
@@ -142,7 +144,7 @@ export class AppComponent implements OnInit, OnDestroy {
     } catch(e) { this.fail(e); } finally { if (version===this.requestVersion) this.loading.set(false); }
   }
   mark(rows: Item[] | undefined, kind:string):Item[] { return (rows ?? []).map(row=>({...row,kind})); }
-  contextRows(data: Record<string,any>) { return ['departments','teams','projects','products','processes','tasks'].flatMap(key=>this.mark(data[key],({departments:'department',teams:'team',projects:'project',products:'product',processes:'process',tasks:'task'} as Record<string,string>)[key])); }
+  contextRows(data: Record<string,any>) { return ['organizations','departments','teams','projects','products','processes','tasks'].flatMap(key=>this.mark(data[key],({organizations:'organization',departments:'department',teams:'team',projects:'project',products:'product',processes:'process',tasks:'task'} as Record<string,string>)[key])); }
   fail(e:unknown) { this.error.set(e instanceof Error ? e.message : 'Não foi possível concluir a operação.'); }
   async run(action:()=>Promise<void>) { if(this.saving()) return; this.saving.set(true);this.error.set('');try { await action(); } catch(e) { this.fail(e); } finally { this.saving.set(false); } }
   async authenticate() { await this.run(async()=>{
