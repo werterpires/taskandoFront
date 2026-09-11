@@ -4,7 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "ng serve --host 127.0.0.1 --proxy-config proxy.conf.json",
-    "build": "ng build --configuration production && node scripts/prepare-deploy.mjs",
+    "build": "ng build --configuration production",
+    "start": "node server.cjs",
+    "deploy": "node server.cjs",
     "serve:dist": "node server.cjs"
   },
   "dependencies": {

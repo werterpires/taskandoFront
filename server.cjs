@@ -6,7 +6,9 @@ const app = express();
 const port = Number(process.env.PORT ?? 3000);
 const host = process.env.HOST ?? '0.0.0.0';
 const candidates = [
+  __dirname,
   join(__dirname, 'browser'),
+  join(__dirname, 'dist', 'taskando'),
   join(__dirname, 'dist', 'taskando', 'browser'),
 ];
 const browserDirectory = candidates.find((directory) => existsSync(join(directory, 'index.html')));
@@ -17,6 +19,7 @@ if (!browserDirectory) {
 
 app.disable('x-powered-by');
 app.get('/health', (_request, response) => response.json({ status: 'ok' }));
+app.get(['/server.cjs', '/package.json'], (_request, response) => response.sendStatus(404));
 app.use(express.static(browserDirectory, { index: false, maxAge: '1y', immutable: true }));
 app.use((request, response, next) => {
   if (!['GET', 'HEAD'].includes(request.method)) return next();
