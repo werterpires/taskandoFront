@@ -167,9 +167,13 @@ legend { color: #506355; font-weight: 800; }
 .form-footer { display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--line); margin-top: 6px; padding-top: 14px; }
 .decision { z-index: 52; }
 .notifications { position: fixed; top: 66px; right: 18px; z-index: 35; width: min(390px, calc(100vw - 36px)); max-height: 70vh; overflow-y: auto; }
-.notification { grid-template-columns: 1fr; }
+.notification { grid-template-columns: minmax(0, 1fr) auto; gap: 8px; padding: 6px; }
 .notification.unread { background: #eef5ec; }
-.notification p { color: var(--muted); font-size: 12px; }
+.notification-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.notification-actions button, .notification-read { font-size: 12px; }
+.notification-content { display: grid; gap: 4px; min-width: 0; border: 0; background: transparent; text-align: left; }
+.notification-content strong { overflow-wrap: anywhere; }
+.notification-content small { color: var(--muted); }
 .reminder-toast { position: fixed; right: 20px; bottom: 20px; z-index: 60; width: min(360px, calc(100vw - 40px)); border: 1px solid #cbdcc9; border-radius: 12px; background: #f4fbf2; padding: 18px; box-shadow: 0 12px 35px #17241a36; }
 .login { min-height: 100vh; display: grid; grid-template-columns: 1fr 1fr; place-items: center; background: #f8faf6; }
 .login-card { display: grid; width: min(450px, calc(100vw - 40px)); gap: 18px; }

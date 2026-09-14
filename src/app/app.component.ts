@@ -23,7 +23,9 @@ export class AppComponent implements OnInit, OnDestroy {
   levels = ['high','medium','low']; levelLabels: Record<string,string> = { high:'Alta', medium:'Média', low:'Baixa' };
   roles = ['watcher','contributor','executor','reviewer','editor','leader'];
   rows = signal<Item[]>([]); tasks = signal<Item[]>([]); organizations = signal<Item[]>([]); lists = signal<Item[]>([]);
-  notifications = signal<Item[]>([]); invitations = signal<Item[]>([]); transfers = signal<Item[]>([]); dueReminders = signal<Item[]>([]);
+  notifications = signal<Item[]>([]); unreadNotificationCount = signal(0); showReadNotifications = signal(false);
+  notificationsLoading = signal(false); notificationsError = signal('');
+  invitations = signal<Item[]>([]); transfers = signal<Item[]>([]); dueReminders = signal<Item[]>([]);
   scope = signal<Item | null>(null); selected = signal<Item | null>(null); children = signal<Item[]>([]);
   detail = signal<Record<string,any>>({}); tab = signal('Detalhes'); showNotifications = signal(false);
   search = signal(''); filter = signal('open'); view = signal('list'); temporal = signal('all');
@@ -42,7 +44,8 @@ export class AppComponent implements OnInit, OnDestroy {
   readonly mcpUrl = `${environment.apiBaseUrl || location.origin}/api/integrations/mcp`;
   templateSetup = signal<Item | null>(null); templateTarget = '0'; templateTitle = ''; templateDate = '';
   decision = signal<{ title: string; options: { value:string; label:string }[]; resolve:(v:string|null)=>void } | null>(null);
-  private timer?: ReturnType<typeof setInterval>; private requestVersion = 0;
+  private timer?: ReturnType<typeof setInterval>; private requestVersion = 0; private notificationRequestVersion = 0;
+  visibleNotifications = computed(() => this.showReadNotifications() ? this.notifications() : this.notifications().filter(row => !row['readAt']));
   taskCollection = computed(() => this.section() === 'Minhas tarefas' || this.scope()?.kind === 'list');
   visible = computed(() => this.rows().filter(row => {
     const q = this.search().toLocaleLowerCase();
@@ -130,14 +133,27 @@ export class AppComponent implements OnInit, OnDestroy {
   }
   async poll() {
     if (!this.user()) return;
-    const [notifications, reminders] = await Promise.allSettled([this.api.request('notifications'), this.api.request('reminders/due')]);
-    if ([notifications, reminders].some(result => result.status === 'rejected' && result.reason instanceof ApiError && result.reason.status === 401)) {
+    const version = ++this.notificationRequestVersion;
+    const showRead = this.showReadNotifications();
+    this.notificationsLoading.set(true);
+    const [unread, reminders, all] = await Promise.allSettled([
+      this.api.request('notifications?unreadOnly=1'),
+      this.api.request('reminders/due'),
+      showRead ? this.api.request('notifications') : Promise.resolve(null),
+    ]);
+    if (version !== this.notificationRequestVersion) return;
+    if ([unread, reminders, all].some(result => result.status === 'rejected' && result.reason instanceof ApiError && result.reason.status === 401)) {
       this.user.set(null); this.ngOnDestroy(); return;
     }
-    if (!this.user()) return;
-    if (notifications.status === 'fulfilled') this.notifications.set(notifications.value.notifications ?? []);
+    if (!this.user() || version !== this.notificationRequestVersion) return;
+    this.notificationsLoading.set(false);
+    if (unread.status === 'fulfilled') this.unreadNotificationCount.set(unread.value.unreadCount ?? 0);
+    const listing = showRead ? all : unread;
+    if (listing.status === 'fulfilled' && listing.value) this.notifications.set(listing.value.notifications ?? []);
+    this.notificationsError.set(unread.status === 'rejected' || listing.status === 'rejected' ? 'Não foi possível carregar as notificações.' : '');
     if (reminders.status === 'fulfilled' && reminders.value.reminders?.length) this.dueReminders.update(old => [...old, ...reminders.value.reminders]);
   }
+  async toggleReadNotifications() { this.showReadNotifications.set(!this.showReadNotifications()); await this.poll(); }
   async navigate(section: string, scope: Item | null = null) { this.section.set(section); this.scope.set(scope); this.selected.set(null); this.search.set(''); this.mobile.set(false); this.error.set(''); await this.load(); }
   async load() {
     const version = ++this.requestVersion; this.loading.set(true); this.error.set('');
@@ -176,9 +192,10 @@ export class AppComponent implements OnInit, OnDestroy {
   contextRows(data: Record<string,any>) { return ['organizations','departments','teams','projects','products','processes','tasks'].flatMap(key=>this.mark(data[key],({organizations:'organization',departments:'department',teams:'team',projects:'project',products:'product',processes:'process',tasks:'task'} as Record<string,string>)[key])); }
   fail(e:unknown) { this.error.set(e instanceof Error ? e.message : 'Não foi possível concluir a operação.'); }
   async run(action:()=>Promise<void>) { if(this.saving()) return; this.saving.set(true);this.error.set('');try { await action(); } catch(e) { this.fail(e); } finally { this.saving.set(false); } }
+  async runNotification(action:()=>Promise<void>) { await this.run(action); if(this.error()) this.notificationsError.set(this.error()); }
   async authenticate() { await this.run(async()=>{
     const data=await this.api.request('auth/login','POST',{email:this.loginEmail,password:this.loginPassword});
-    this.loginPassword='';this.user.set(data.user);await this.bootstrap();
+    this.loginPassword='';this.showReadNotifications.set(false);this.unreadNotificationCount.set(0);this.notifications.set([]);this.notificationsError.set('');this.user.set(data.user);await this.bootstrap();
   }); }
   async createUser() { await this.run(async()=>{
     await this.api.request('auth/users','POST',{displayName:this.newUserDisplayName,email:this.newUserEmail,password:this.newUserPassword});
@@ -188,7 +205,7 @@ export class AppComponent implements OnInit, OnDestroy {
     await this.api.request('auth/password','PATCH',{currentPassword:this.currentPassword,newPassword:this.newPassword});
     this.currentPassword='';this.newPassword='';this.notice.set('Senha alterada.');
   }); }
-  async logout() { await this.run(async()=>{await this.api.request('auth/logout','POST',{});this.user.set(null);this.ngOnDestroy();}); }
+  async logout() { await this.run(async()=>{await this.api.request('auth/logout','POST',{});this.user.set(null);this.showReadNotifications.set(false);this.ngOnDestroy();}); }
   localDate(date:Date) { return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`; }
   title(row:Item) { return row.title ?? row.name ?? ''; }
   inCell(importance:string,urgency:string) { return this.visible().filter(r=>r['importance']===importance&&r['urgency']===urgency); }
@@ -322,7 +339,9 @@ export class AppComponent implements OnInit, OnDestroy {
   async addToList() {await this.run(async()=>{await this.api.request(`lists/${this.scope()!.id}/tasks`,'POST',{taskId:this.listTaskId});await this.load();});}
   async removeFromList(row:Item) {await this.run(async()=>{await this.api.request(`lists/${this.scope()!.id}/tasks/${row.id}`,'DELETE',{});await this.load();});}
   async toggleSeries(row:Item) {await this.run(async()=>{await this.api.request(`recurrence-series/${row.id}`,'PATCH',{active:!row['active']});await this.load();});}
-  async readNotification(row:Item) {await this.run(async()=>{await this.api.request('notifications','PATCH',{id:row.id,read:true});await this.poll();const task=this.tasks().find(t=>t.id===row['taskId']);if(task)await this.open(task);});}
+  async readNotification(row:Item) {await this.runNotification(async()=>{await this.api.request('notifications','PATCH',{id:row.id,read:true});await this.poll();});}
+  async openNotification(row:Item) {await this.runNotification(async()=>{if(!row['readAt'])await this.api.request('notifications','PATCH',{id:row.id,read:true});await this.poll();const task=this.tasks().find(t=>t.id===row['taskId']);if(task)await this.open(task);});}
+  async readAllNotifications() {await this.runNotification(async()=>{await this.api.request('notifications','PATCH',{all:true,read:true});await this.poll();});}
   async saveSettings() {await this.run(async()=>{const settings=this.settings();const prefs:Record<string,any>={};for(const key of ['dueSoonEnabled','overdueEnabled','scheduledEnabled','reminderEnabled','timeZone'])if(key in settings)prefs[key]=settings[key];await this.api.request('notification-preferences','PATCH',prefs);await this.api.request('preferences/size-labels','PATCH',{labels:this.sizeLabels.split(',').map(v=>v.trim())});this.notice.set('Preferências salvas.');});}
   async generateToken() {if(!await this.ask('Gerar um token invalida o anterior. Continuar?',[{value:'yes',label:'Gerar token'}]))return;await this.run(async()=>{const data=await this.api.request('mcp-token','POST',{});this.token.set(data.secret);});}
   async revokeToken(){await this.run(async()=>{await this.api.request('mcp-token','DELETE',{});this.token.set('');this.notice.set('Token revogado.');});}

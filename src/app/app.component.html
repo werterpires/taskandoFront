@@ -15,7 +15,7 @@
       <footer class="sidebar-footer"><span>{{user()!['displayName']}}</span><button (click)="logout()">Sair ↗</button></footer>
     </aside>
     <main class="main">
-      <header class="topbar"><div><button class="mobile-toggle" aria-label="Abrir menu" (click)="mobile.set(true)">☰</button><span>Meu espaço</span><span class="separator">/</span><strong>{{scope()?title(scope()!):section()}}</strong></div><div class="top-actions"><span class="today-label">{{month() | date:'MMMM yyyy'}}</span><button aria-label="Notificações" (click)="showNotifications.set(!showNotifications())">♧ <span>{{notifications().length}}</span></button><span class="avatar small">{{user()!['displayName'].slice(0,1)}}</span></div></header>
+      <header class="topbar"><div><button class="mobile-toggle" aria-label="Abrir menu" (click)="mobile.set(true)">☰</button><span>Meu espaço</span><span class="separator">/</span><strong>{{scope()?title(scope()!):section()}}</strong></div><div class="top-actions"><span class="today-label">{{month() | date:'MMMM yyyy'}}</span><button aria-label="Notificações" (click)="showNotifications.set(!showNotifications())">♧ <span>{{unreadNotificationCount()}}</span></button><span class="avatar small">{{user()!['displayName'].slice(0,1)}}</span></div></header>
       <div class="page">
         @if(error()){<div class="error" role="alert">{{error()}}<button aria-label="Fechar erro" (click)="error.set('')">×</button></div>}
         @if(notice()){<div class="notice" role="status">{{notice()}}<button aria-label="Fechar aviso" (click)="notice.set('')">×</button></div>}
@@ -51,7 +51,21 @@
     </main>
   </div>
 }
-@if(showNotifications()) {<aside class="notifications panel"><div class="line"><h2>Notificações</h2><button aria-label="Fechar notificações" (click)="showNotifications.set(false)">×</button></div>@for(row of notifications();track row.id){<button class="notification" [class.unread]="!row['readAt']" (click)="readNotification(row)"><strong>{{row['summary']}}</strong><small>{{row['readAt']?'Lida':'Marcar como lida'}}</small></button>}@if(!notifications().length){<p>Nenhuma notificação por enquanto.</p>}</aside>}
+@if(showNotifications()) {
+  <aside class="notifications panel" aria-label="Notificações">
+    <div class="line"><h2>Notificações</h2><button aria-label="Fechar notificações" (click)="showNotifications.set(false)">×</button></div>
+    <div class="notification-actions"><button (click)="toggleReadNotifications()" [disabled]="notificationsLoading()">{{showReadNotifications()?'Ocultar lidas':'Mostrar lidas'}}</button><button (click)="readAllNotifications()" [disabled]="saving() || !unreadNotificationCount()">{{saving()?'Aguarde…':'Marcar todas como lidas'}}</button></div>
+    @if(notificationsError()){<p class="error" role="alert">{{notificationsError()}}</p>}
+    @if(notificationsLoading()){<p role="status">Carregando notificações…</p>}
+    @for(row of visibleNotifications();track row.id){
+      <div class="notification" [class.unread]="!row['readAt']">
+        <button class="notification-content" [disabled]="saving()" (click)="openNotification(row)"><strong>{{row['summary']}}</strong><small>{{row['readAt']?'Lida':'Abrir notificação'}}</small></button>
+        @if(!row['readAt']){<button class="notification-read" [disabled]="saving()" [attr.aria-label]="'Marcar como lida: '+row['summary']" (click)="readNotification(row)">Marcar como lida</button>}
+      </div>
+    }
+    @if(!notificationsLoading() && !notificationsError() && !visibleNotifications().length){<p>{{showReadNotifications()?'Nenhuma notificação por enquanto.':'Nenhuma notificação não lida.'}}</p>}
+  </aside>
+}
 @if(dueReminders().length){<div class="reminder-toast" role="alert">@for(reminder of dueReminders();track reminder.id){<strong>♧ {{reminder.title}}</strong><p>{{reminder['description']}}</p>}<button (click)="dueReminders.set([])">Entendi</button></div>}
 @if(selected();as row){<div class="modal-backdrop" (click)="selected.set(null)"></div><section class="drawer" role="dialog" aria-modal="true" aria-label="Detalhes do item"><header class="drawer-header"><span class="eyebrow">{{labels[row.kind!]||'Detalhes'}}</span><button aria-label="Fechar detalhes" (click)="selected.set(null)">×</button></header><h2>{{title(row)}}</h2><div class="tabs detail-tabs">@for(t of ['Detalhes','Filhos','Acessos'];track t){<button [class.chosen]="tab()===t" (click)="tab.set(t)">{{t}}</button>}@if(row.kind==='task'){<button (click)="tab.set('Checklist')">Checklist</button><button (click)="tab.set('Comentários')">Comentários</button><button (click)="tab.set('Histórico')">Histórico</button>}@if(['process','phase'].includes(row.kind!)){<button (click)="tab.set('Dependências')">Dependências</button>}</div>
   @if(error()){<p class="error" role="alert">{{error()}}</p>}
