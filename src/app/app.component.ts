@@ -58,7 +58,12 @@ export class AppComponent implements OnInit, OnDestroy {
     }
     return true;
   }));
-  orderedVisible = computed(() => this.section() === 'Minhas tarefas' ? orderTasks(this.visible()) : this.visible());
+  orderedVisible = computed(() => {
+    const rows = this.visible();
+    if (this.section() === 'Minhas tarefas') return orderTasks(rows);
+    if (this.section() === 'Cíclicas') return [...rows.filter(row => row['released']), ...rows.filter(row => !row['released'])];
+    return rows;
+  });
   byStatus = computed(() => Object.fromEntries(this.workStatuses.map(status => {
     const rows = this.visible().filter(row => row['status'] === status);
     return [status, this.section() === 'Minhas tarefas' ? orderTasks(rows) : rows];
@@ -199,7 +204,8 @@ export class AppComponent implements OnInit, OnDestroy {
     if(['task','project','front','product','process','phase'].includes(kind)) Object.assign(payload,{approvalRequired:!!d['approvalRequired'],size:d['size']||null,importance:d['importance']||null,urgency:d['urgency']||null});
     if(!this.editorId) Object.assign(payload,{parentType:d['parentType']||null,parentId:d['parentId']||null});
     if(kind==='task') {
-      Object.assign(payload,{dueDate:d['dueDate']||null,tags:String(d['tags']??'').split(',').map(t=>t.trim()).filter(Boolean)});
+      payload['tags']=String(d['tags']??'').split(',').map(t=>t.trim()).filter(Boolean);
+      if(d['taskType']!=='cyclic') payload['dueDate']=d['dueDate']||null;
       if(!this.editorId) payload['taskType']=d['taskType'];
       if(d['taskType']==='date') payload['dateAt']=d['dateAt'];
       if(['commitment','event'].includes(d['taskType'])) payload['startAt']=d['startAt']?new Date(d['startAt']).toISOString():null;
