@@ -122,19 +122,21 @@ export class AppComponent implements OnInit, OnDestroy {
     catch (e) { if (!(e instanceof ApiError && e.status === 401)) this.fail(e); }
     finally { this.authenticating.set(false); }
   }
-  ngOnDestroy() { if (this.timer) clearInterval(this.timer); }
-  async bootstrap() { await this.reloadNavigation(); await this.load(); await this.poll(); this.timer = setInterval(() => void this.poll(), 30_000); }
+  ngOnDestroy() { if (this.timer) clearInterval(this.timer); this.timer = undefined; }
+  async bootstrap() { await this.reloadNavigation(); await this.load(); await this.poll(); if (this.user()) this.timer = setInterval(() => void this.poll(), 30_000); }
   async reloadNavigation() {
     const [orgs, lists, tasks] = await Promise.all([this.api.request('organizations'),this.api.request('lists'),this.api.request('tasks')]);
     this.organizations.set(orgs.organizations ?? []); this.invitations.set(orgs.invitations ?? []); this.lists.set(lists.lists ?? []); this.tasks.set(this.mark(tasks.tasks,'task'));
   }
   async poll() {
     if (!this.user()) return;
-    try {
-      const [notifications, reminders] = await Promise.all([this.api.request('notifications'),this.api.request('reminders/due','POST',{})]);
-      this.notifications.set(notifications.notifications ?? []);
-      if (reminders.reminders?.length) this.dueReminders.update(old => [...old,...reminders.reminders]);
-    } catch (e) { if (e instanceof ApiError && e.status===401) { this.user.set(null); this.ngOnDestroy(); } }
+    const [notifications, reminders] = await Promise.allSettled([this.api.request('notifications'), this.api.request('reminders/due')]);
+    if ([notifications, reminders].some(result => result.status === 'rejected' && result.reason instanceof ApiError && result.reason.status === 401)) {
+      this.user.set(null); this.ngOnDestroy(); return;
+    }
+    if (!this.user()) return;
+    if (notifications.status === 'fulfilled') this.notifications.set(notifications.value.notifications ?? []);
+    if (reminders.status === 'fulfilled' && reminders.value.reminders?.length) this.dueReminders.update(old => [...old, ...reminders.value.reminders]);
   }
   async navigate(section: string, scope: Item | null = null) { this.section.set(section); this.scope.set(scope); this.selected.set(null); this.search.set(''); this.mobile.set(false); this.error.set(''); await this.load(); }
   async load() {
