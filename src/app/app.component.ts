@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy, computed, inject, signal } from '@angular
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiError, ApiService, Item } from './api.service';
+import { orderTasks } from './task-order';
 import { environment } from '../environments/environment';
 
 const paths: Record<string, string> = { task: 'tasks', project: 'projects', front: 'fronts', product: 'products', process: 'processes', phase: 'phases', organization: 'organizations', list: 'lists', reminder: 'reminders', series: 'recurrence-series' };
@@ -57,6 +58,11 @@ export class AppComponent implements OnInit, OnDestroy {
     }
     return true;
   }));
+  orderedVisible = computed(() => this.section() === 'Minhas tarefas' ? orderTasks(this.visible()) : this.visible());
+  byStatus = computed(() => Object.fromEntries(this.workStatuses.map(status => {
+    const rows = this.visible().filter(row => row['status'] === status);
+    return [status, this.section() === 'Minhas tarefas' ? orderTasks(rows) : rows];
+  })) as Record<string, Item[]>);
   readonly homeGroupDefinitions = [
     { kind: 'organization', label: 'Organizações' },
     { kind: 'department', label: 'Departamentos' },
@@ -178,7 +184,6 @@ export class AppComponent implements OnInit, OnDestroy {
   async logout() { await this.run(async()=>{await this.api.request('auth/logout','POST',{});this.user.set(null);this.ngOnDestroy();}); }
   localDate(date:Date) { return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`; }
   title(row:Item) { return row.title ?? row.name ?? ''; }
-  byStatus(status:string) { return this.visible().filter(r=>r['status']===status); }
   inCell(importance:string,urgency:string) { return this.visible().filter(r=>r['importance']===importance&&r['urgency']===urgency); }
   onDay(day:string) { return this.rows().filter(r => r['taskType']!=='reminder' && (r['dateAt']===day || r['dueDate']===day || r['startAt']?.slice(0,10)===day || (r['taskType']==='event' && r['startAt']?.slice(0,10)<=day && r['endAt']?.slice(0,10)>=day))); }
   async changeMonth(offset:number) { const d=new Date(this.month());d.setMonth(d.getMonth()+offset);this.month.set(d);await this.load(); }
