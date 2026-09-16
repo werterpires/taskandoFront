@@ -11,6 +11,11 @@ O servidor local abre em `http://localhost:4200` e encaminha `/api` e `/mcp` par
 
 ```bash
 npm run build
+npm test
 ```
 
 A interface cobre tarefas e seus nove tipos, subtarefas, checklist, comentários, listas pessoais, calendário, Kanban, quadrante, estrutura, projetos, frentes, produtos, processos, fases, dependências, templates, recorrência, cíclicas, lembretes, notificações, papéis, transferências de Owner, configurações e MCP.
+
+Processos abrem dentro do shell autenticado na rota hash `#/processos/:id`. A página reúne metadados, progresso, fases, tarefas diretas e a projeção completa de dependências, com estados explícitos de carregamento, acesso negado, não encontrado, falha temporária, vazio e somente leitura. Os filtros de concluídos, cancelados e arquivados são enviados à API; busca textual e recortes de prazo refinam localmente o resultado carregado. As demais entidades continuam usando o painel de detalhes existente.
+
+O grafo de dependências é compartilhado entre a página de processo e a visão de fase. Ele separa fases e tarefas diretas em faixas, mostra simultaneamente o status do trabalho e a disponibilidade por dependências e permite criar ou remover ligações conforme as capacidades devolvidas pela API. A interação funciona por ponteiro e teclado, anuncia erros de forma acessível e recarrega a projeção do backend depois de cada mutação.

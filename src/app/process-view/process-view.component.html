@@ -1,0 +1,97 @@
+<div class="page process-page">
+  <button class="process-back" (click)="back()">← Voltar</button>
+
+  @if (state() === 'loading') {
+    <section class="surface process-state" role="status">
+      <span class="empty-symbol">❧</span>
+      <h2>Carregando o processo…</h2>
+      <p>Estamos reunindo progresso, atividades e dependências.</p>
+    </section>
+  } @else if (state() === 'forbidden' || state() === 'not-found') {
+    <section class="surface process-state" role="alert">
+      <span class="empty-symbol">◇</span>
+      <h2>{{state() === 'forbidden' ? 'Acesso indisponível' : 'Processo não encontrado'}}</h2>
+      <p>{{errorMessage()}}</p>
+      <button (click)="back()">Voltar</button>
+    </section>
+  } @else if (state() === 'temporary-error') {
+    <section class="surface process-state" role="alert">
+      <span class="empty-symbol">↻</span>
+      <h2>Falha temporária</h2>
+      <p>{{errorMessage()}}</p>
+      <div class="actions"><button (click)="back()">Voltar</button><button class="primary" (click)="load()">Tentar novamente</button></div>
+    </section>
+  } @else if (process(); as item) {
+    <section class="page-heading process-heading">
+      <div>
+        <p class="eyebrow">PROCESSO</p>
+        <h1>{{item.title}}</h1>
+        <p>{{item['description'] || 'Sem descrição.'}}</p>
+      </div>
+      <span class="badge" [attr.data-status]="item['status']">{{statusLabels[item['status']] || item['status']}}</span>
+    </section>
+
+    @if (readOnly()) {
+      <div class="notice process-readonly" role="status"><span><strong>Somente leitura.</strong> Seu acesso permite consultar este processo, sem alterar sua estrutura.</span></div>
+    }
+
+    @if (progress(); as processProgress) {
+      <section class="stats process-stats">
+        <article><span>Progresso</span><strong>{{processProgress.percentage}}%</strong><small>{{processProgress.completed}} de {{processProgress.total}} itens válidos</small></article>
+        <article><span>Itens visíveis</span><strong>{{processProgress.visible}}</strong><small>{{processProgress.excluded}} cancelados ou arquivados</small></article>
+        <article><span>Dependências</span><strong>{{graph().edges.length}}</strong><small>{{graphNodes().length}} nós na projeção completa</small></article>
+      </section>
+    }
+
+    <section class="surface process-work">
+      <div class="toolbar process-toolbar">
+        <div class="closed-filters" aria-label="Exibir estados encerrados">
+          @for (closed of closedStates; track closed) {
+            <label class="check-label"><input type="checkbox" [checked]="isIncluded(closed)" (change)="toggleClosed(closed, $any($event.target).checked)">Mostrar {{closedLabels[closed].toLocaleLowerCase()}}</label>
+          }
+        </div>
+        <div class="actions">
+          <input class="search" aria-label="Buscar no processo" placeholder="⌕ Buscar…" [ngModel]="search()" (ngModelChange)="search.set($event)">
+          <select aria-label="Filtrar tarefas por prazo" [ngModel]="temporal()" (ngModelChange)="temporal.set($event)">
+            <option value="all">Todos os prazos</option>
+            <option value="today">Hoje</option>
+            <option value="overdue">Atrasadas</option>
+            <option value="no_due">Sem prazo</option>
+          </select>
+        </div>
+      </div>
+
+      @if (!hasVisibleContent()) {
+        <div class="empty"><span class="empty-symbol">❧</span><h2>Nenhum item neste recorte.</h2><p>Ajuste os filtros ou inclua estados encerrados para consultar o histórico.</p></div>
+      } @else {
+        <div class="process-columns">
+          <section>
+            <header><h2>Fases</h2><span>{{visiblePhases().length}}</span></header>
+            @for (phase of visiblePhases(); track phase.id) {
+              <article class="process-item"><div><strong>{{phase.title}}</strong><p>{{phase['description'] || 'Sem descrição.'}}</p></div><span class="badge" [attr.data-status]="phase['status']">{{statusLabels[phase['status']] || phase['status']}}</span></article>
+            }
+            @if (!visiblePhases().length) { <p class="muted process-column-empty">Nenhuma fase neste recorte.</p> }
+          </section>
+          <section>
+            <header><h2>Tarefas diretas</h2><span>{{visibleTasks().length}}</span></header>
+            @for (task of visibleTasks(); track task.id) {
+              <article class="process-item"><div><strong>{{task.title}}</strong><p>{{task['description'] || task['dueDate'] || 'Sem descrição ou prazo.'}}</p></div><span class="badge" [attr.data-status]="task['status']">{{statusLabels[task['status']] || task['status']}}</span></article>
+            }
+            @if (!visibleTasks().length) { <p class="muted process-column-empty">Nenhuma tarefa direta neste recorte.</p> }
+          </section>
+        </div>
+      }
+    </section>
+
+    <section class="surface dependency-projection">
+      <header class="process-section-heading"><div><p class="eyebrow">PROJEÇÃO COMPLETA</p><h2>Dependências</h2></div><span>{{graph().edges.length}} ligações</span></header>
+      <app-dependency-graph
+        [graph]="graph()"
+        containerType="process"
+        [containerId]="item.id"
+        [readOnly]="readOnly()"
+        (graphChange)="graph.set($event)"
+      />
+    </section>
+  }
+</div>

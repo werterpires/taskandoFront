@@ -3,6 +3,16 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../environments/environment';
 export type Item = { id: string; title?: string; name?: string; kind?: string; [key: string]: any };
+export const closedWorkStates = ['completed', 'cancelled', 'archived'] as const;
+export type ClosedWorkState = typeof closedWorkStates[number];
+
+export function withIncludeClosed(path: string, states: readonly ClosedWorkState[]): string {
+  const selected = closedWorkStates.filter(state => states.includes(state));
+  if (!selected.length) return path;
+  const separator = path.includes('?') ? '&' : '?';
+  return `${path}${separator}includeClosed=${selected.join(',')}`;
+}
+
 export class ApiError extends Error {
   constructor(readonly status: number, readonly details: Record<string, any>) { super(details['error'] ?? details['message'] ?? 'Não foi possível concluir a operação.'); }
 }
@@ -20,5 +30,9 @@ export class ApiService {
       }
       throw error;
     }
+  }
+
+  requestWithClosed<T = any>(path: string, states: readonly ClosedWorkState[]): Promise<T> {
+    return this.request<T>(withIncludeClosed(path, states));
   }
 }

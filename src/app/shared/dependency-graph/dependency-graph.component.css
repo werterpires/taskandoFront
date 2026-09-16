@@ -1,0 +1,62 @@
+:host { display: block; min-width: 0; }
+.dependency-graph { min-width: 0; color: #35493a; }
+.graph-help { display: flex; justify-content: space-between; align-items: center; gap: 18px; border-bottom: 1px solid #e1e7df; padding: 14px 18px; background: #fbfcfa; }
+.graph-help strong { font: 700 17px Georgia, serif; }
+.graph-help p { margin: 4px 0 0; color: #6f7d72; font-size: 11px; }
+.graph-legend { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px 12px; color: #657168; font-size: 10px; font-weight: 700; white-space: nowrap; }
+.graph-legend span { display: inline-flex; align-items: center; gap: 4px; }
+.graph-legend i { display: inline-grid; width: 20px; height: 20px; place-items: center; border-radius: 50%; background: #eef1ed; font-style: normal; }
+.graph-legend i[data-dependency="released"] { color: #3f6948; background: #dfeee1; }
+.graph-legend i[data-dependency="blocked"] { color: #934f49; background: #f6e4e2; }
+.graph-readonly { margin: 0; border-bottom: 1px solid #e1e7df; padding: 9px 18px; color: #6e756f; background: #f7f8f6; font-size: 11px; }
+.graph-error { display: flex; justify-content: space-between; align-items: center; gap: 12px; border-bottom: 1px solid #edcbc6; padding: 10px 18px; color: #874941; background: #fff3f1; font-size: 12px; }
+.graph-error button { border: 0; background: transparent; padding: 4px 8px; color: inherit; }
+.graph-empty { display: grid; min-height: 190px; place-items: center; align-content: center; gap: 5px; color: #7a877d; }
+.graph-empty span { color: #9aac9c; font: 36px Georgia, serif; }
+.graph-empty p { margin: 0; }
+.graph-viewport { max-width: 100%; overflow: auto; overscroll-behavior: contain; background: radial-gradient(circle, #dfe6dc 1px, transparent 1px) 0 0 / 20px 20px, #fbfcfa; scrollbar-gutter: stable; }
+.graph-viewport:focus-visible { outline: 2px solid #78947d; outline-offset: -2px; }
+.graph-canvas { position: relative; min-width: 100%; }
+.graph-lines { position: absolute; inset: 0; overflow: visible; pointer-events: none; }
+.graph-lines marker path { fill: #7f9a83; }
+.dependency-line { fill: none; stroke: #7f9a83; stroke-width: 2; }
+.dependency-preview { stroke: #52765a; stroke-width: 2.5; stroke-dasharray: 7 6; }
+.graph-lane-title { position: absolute; left: 28px; z-index: 2; margin: 0; color: #69776d; font-size: 10px; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
+.graph-lane-title::after { content: ''; display: inline-block; width: 48px; border-top: 1px solid #cfd9cc; margin: 0 0 3px 9px; }
+.dependency-node { position: absolute; z-index: 3; box-sizing: border-box; display: grid; width: 224px; min-height: 166px; grid-template-rows: auto auto 1fr; gap: 9px; border: 1px solid #ccd8ca; border-left: 4px solid #829d86; border-radius: 12px; padding: 13px 15px; background: #fff; box-shadow: 0 7px 22px #243b2912; }
+.dependency-node[data-node-type="phase"] { border-left-color: #81769c; }
+.dependency-node[data-work-status="completed"] { border-left-color: #65916c; }
+.dependency-node[data-work-status="cancelled"] { border-left-color: #b06b63; }
+.dependency-node[data-work-status="archived"] { border-left-color: #8a908a; background: #f7f8f6; }
+.dependency-node[data-dependency-state="blocked"] { box-shadow: 0 0 0 2px #efd5d1, 0 7px 22px #243b2912; }
+.node-heading { display: grid; min-width: 0; gap: 3px; }
+.node-heading small { color: #7f8d82; font-size: 9px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.node-heading strong { overflow: hidden; color: #314937; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.node-states { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.node-state { display: flex; min-width: 0; align-items: center; gap: 6px; border-radius: 7px; padding: 6px; color: #687369; background: #eef1ed; font-size: 9px; font-weight: 800; }
+.node-state > i { flex: none; font-style: normal; font-size: 15px; }
+.node-state > span { display: grid; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.node-state small { color: currentColor; font-size: 7px; letter-spacing: .08em; opacity: .72; text-transform: uppercase; }
+.work-state[data-status="in_progress"] { color: #75602e; background: #f7edd3; }
+.work-state[data-status="completed"] { color: #3f6948; background: #dfeee1; }
+.work-state[data-status="awaiting_approval"] { color: #765680; background: #f0e5f3; }
+.work-state[data-status="cancelled"] { color: #934f49; background: #f6e4e2; }
+.work-state[data-status="archived"] { color: #5d665f; background: #e6e9e5; }
+.dependency-state[data-dependency="blocked"] { color: #934f49; background: #f6e4e2; }
+.dependency-state[data-dependency="released"] { color: #3f6948; background: #dfeee1; }
+.node-blockers { align-self: end; overflow: hidden; margin: 0; color: #7b625e; font-size: 9px; line-height: 1.3; text-overflow: ellipsis; white-space: nowrap; }
+.archived-note { color: #656d67; }
+.graph-port, .remove-edge { box-sizing: border-box; display: grid; width: 44px; height: 44px; place-items: center; border: 1px solid #9caf9d; border-radius: 50%; color: #45634b; background: #f1f7f0; touch-action: none; }
+.graph-port { position: absolute; top: calc(50% - 22px); z-index: 5; font-size: 20px; }
+.graph-port-in { left: -23px; transform: rotate(180deg); }
+.graph-port-out { right: -23px; }
+.graph-port:hover:not(:disabled), .graph-port:focus-visible, .graph-port.active { border-color: #3f6847; background: #dfeee1; outline: 2px solid #88a48d; outline-offset: 2px; }
+.graph-port:disabled { border-color: #d8ded6; color: #a9b2aa; background: #f7f8f6; opacity: .75; }
+.remove-edge { position: absolute; z-index: 6; border-color: #d8b6b1; color: #8b4c45; background: #fff7f5; font-size: 18px; box-shadow: 0 2px 7px #243b2917; }
+.remove-edge:hover:not(:disabled), .remove-edge:focus-visible { border-color: #a65e55; outline: 2px solid #d9aaa4; outline-offset: 1px; }
+.visually-hidden { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+@media (max-width: 700px) {
+  .graph-help { align-items: flex-start; flex-direction: column; }
+  .graph-legend { justify-content: flex-start; white-space: normal; }
+  .graph-viewport { max-height: 70vh; }
+}

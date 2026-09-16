@@ -1,14 +1,17 @@
 import { Component, OnInit, OnDestroy, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ApiError, ApiService, Item } from './api.service';
+import { Router, RouterOutlet } from '@angular/router';
+import { ApiError, ApiService, ClosedWorkState, Item, closedWorkStates } from './api.service';
 import { orderTasks } from './task-order';
 import { environment } from '../environments/environment';
+import { DependencyGraph, DependencyGraphComponent, EMPTY_DEPENDENCY_GRAPH } from './shared/dependency-graph/dependency-graph.component';
 
 const paths: Record<string, string> = { task: 'tasks', project: 'projects', front: 'fronts', product: 'products', process: 'processes', phase: 'phases', organization: 'organizations', list: 'lists', reminder: 'reminders', series: 'recurrence-series' };
-@Component({ selector: 'app-root', standalone: true, imports: [CommonModule, FormsModule], templateUrl: './app.component.html' })
+@Component({ selector: 'app-root', standalone: true, imports: [CommonModule, FormsModule, RouterOutlet, DependencyGraphComponent], templateUrl: './app.component.html' })
 export class AppComponent implements OnInit, OnDestroy {
   api = inject(ApiService);
+  router = inject(Router);
   user = signal<Item | null>(null); authenticating = signal(true); loading = signal(false); saving = signal(false);
   error = signal(''); notice = signal(''); section = signal('Início'); mobile = signal(false);
   loginEmail = ''; loginPassword = '';
@@ -28,11 +31,14 @@ export class AppComponent implements OnInit, OnDestroy {
   invitations = signal<Item[]>([]); transfers = signal<Item[]>([]); dueReminders = signal<Item[]>([]);
   scope = signal<Item | null>(null); selected = signal<Item | null>(null); children = signal<Item[]>([]);
   detail = signal<Record<string,any>>({}); tab = signal('Detalhes'); showNotifications = signal(false);
-  search = signal(''); filter = signal('open'); view = signal('list'); temporal = signal('all');
+  search = signal(''); view = signal('list'); temporal = signal('all');
+  includeClosed = signal<ClosedWorkState[]>([]);
+  readonly closedStates = closedWorkStates;
+  readonly closedLabels: Record<ClosedWorkState,string> = { completed:'Concluídos', cancelled:'Cancelados', archived:'Arquivados' };
   reportStart = ''; reportEnd = ''; reportStatus = ''; reportType = ''; reportImportance = ''; reportUrgency = '';
   month = signal(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   editing = signal(false); draft: Record<string,any> = {}; editorKind = 'task'; editorId: string | null = null;
-  newText = ''; inviteEmail = ''; inviteRole = 'watcher'; predecessor = ''; successor = ''; dependencyKind = 'task';
+  newText = ''; inviteEmail = ''; inviteRole = 'watcher';
   templateName = ''; transferTarget = ''; transferMode = 'normal'; listTaskId = ''; characteristics = '';
   settings = signal<Record<string,any>>({}); token = signal(''); sizeLabels = 'Muito pequeno, Pequeno, Médio, Grande, Muito grande';
   readonly preferenceFields = [
@@ -41,18 +47,18 @@ export class AppComponent implements OnInit, OnDestroy {
     { key: 'scheduledEnabled', label: 'Avisar antes de tarefas agendadas' },
     { key: 'reminderEnabled', label: 'Exibir lembretes no aplicativo' },
   ];
+  readonly emptyDependencyGraph = EMPTY_DEPENDENCY_GRAPH;
   readonly mcpUrl = `${environment.apiBaseUrl || location.origin}/api/integrations/mcp`;
   templateSetup = signal<Item | null>(null); templateTarget = '0'; templateTitle = ''; templateDate = '';
   decision = signal<{ title: string; options: { value:string; label:string }[]; resolve:(v:string|null)=>void } | null>(null);
   private timer?: ReturnType<typeof setInterval>; private requestVersion = 0; private notificationRequestVersion = 0;
   visibleNotifications = computed(() => this.showReadNotifications() ? this.notifications() : this.notifications().filter(row => !row['readAt']));
   taskCollection = computed(() => this.section() === 'Minhas tarefas' || this.scope()?.kind === 'list');
+  kanbanStatuses = computed(() => this.workStatuses.filter(status => !closedWorkStates.includes(status as ClosedWorkState) || this.includeClosed().includes(status as ClosedWorkState)));
   visible = computed(() => this.rows().filter(row => {
     const q = this.search().toLocaleLowerCase();
     if (q && !`${row.title ?? row.name} ${row['description'] ?? ''}`.toLocaleLowerCase().includes(q)) return false;
     if (row.kind === 'task' && this.taskCollection()) {
-      if (this.filter() === 'open' && ['completed','cancelled','archived'].includes(row['status'])) return false;
-      if (this.filter() === 'completed' && row['status'] !== 'completed') return false;
       const date = row['dueDate'] ?? row['dateAt'] ?? row['startAt']?.slice(0,10);
       const today = this.localDate(new Date());
       if (this.temporal() === 'today' && date !== today && !row['pinnedForToday']) return false;
@@ -96,7 +102,7 @@ export class AppComponent implements OnInit, OnDestroy {
     const tasks = this.tasks();
     const items = this.rows();
     const active = (item: Item) => !['completed','cancelled','archived'].includes(item['status']);
-    const total = items.filter(item => item['status'] !== 'archived').length;
+    const total = items.filter(item => !['cancelled','archived'].includes(item['status'])).length;
     const completed = items.filter(item => item['status'] === 'completed').length;
     return {
       overdue: tasks.filter(task => active(task) && task['dueDate'] && task['dueDate'] < today).length,
@@ -154,40 +160,47 @@ export class AppComponent implements OnInit, OnDestroy {
     if (reminders.status === 'fulfilled' && reminders.value.reminders?.length) this.dueReminders.update(old => [...old, ...reminders.value.reminders]);
   }
   async toggleReadNotifications() { this.showReadNotifications.set(!this.showReadNotifications()); await this.poll(); }
-  async navigate(section: string, scope: Item | null = null) { this.section.set(section); this.scope.set(scope); this.selected.set(null); this.search.set(''); this.mobile.set(false); this.error.set(''); await this.load(); }
+  async navigate(section: string, scope: Item | null = null) { await this.router.navigate(['/']);this.section.set(section); this.scope.set(scope); this.selected.set(null); this.search.set(''); this.mobile.set(false); this.error.set(''); await this.load(); }
   async load() {
     const version = ++this.requestVersion; this.loading.set(true); this.error.set('');
     try {
       let rows: Item[] = []; const section = this.section(), scope = this.scope();
       if (scope?.kind === 'list') {
-        const data = await this.api.request(`lists/${scope.id}/tasks`); rows = this.mark(data.tasks,'task');
+        const data = await this.api.requestWithClosed(`lists/${scope.id}/tasks`,this.includeClosed()); rows = this.mark(data.tasks,'task');
       } else if (scope) {
-        const data = await this.api.request(`context?parentType=${scope.kind}&parentId=${scope.id}`); rows = this.contextRows(data);
+        const data = await this.api.requestWithClosed(`context?parentType=${scope.kind}&parentId=${scope.id}`,this.includeClosed()); rows = this.contextRows(data);
       } else if (section === 'Painel') {
-        const [matrix, taskData] = await Promise.all([this.api.request('priority-matrix'), this.api.request('tasks')]);
+        const [matrix, taskData] = await Promise.all([this.api.requestWithClosed('priority-matrix',closedWorkStates), this.api.request('tasks')]);
         this.tasks.set(this.mark(taskData.tasks,'task')); rows = matrix.items ?? [];
       } else if (section === 'Início') {
-        rows = this.contextRows(await this.api.request('context?parentType=root'));
+        rows = this.contextRows(await this.api.requestWithClosed('context?parentType=root',this.includeClosed()));
       } else if (['Minhas tarefas','Relatórios'].includes(section)) {
-        const data = await this.api.request('tasks'); this.tasks.set(this.mark(data.tasks,'task')); rows = this.tasks();
+        const included = section === 'Relatórios' ? this.reportClosedStates() : this.includeClosed();
+        const data = await this.api.requestWithClosed('tasks',included); this.tasks.set(this.mark(data.tasks,'task')); rows = this.tasks();
       } else if (section === 'Calendário') {
         const from = this.calendarDays()[0].key, to = this.calendarDays()[41].key;
         await this.api.request('recurrence-series/materialize-window','POST',{from,to});
-        rows = this.mark((await this.api.request('tasks')).tasks,'task');
-      } else if (section === 'Quadrante') { rows = (await this.api.request('priority-matrix')).items ?? []; }
+        rows = this.mark((await this.api.requestWithClosed('tasks',this.includeClosed())).tasks,'task');
+      } else if (section === 'Quadrante') { rows = (await this.api.requestWithClosed('priority-matrix',this.includeClosed())).items ?? []; }
       else if (section === 'Cíclicas') rows = this.mark((await this.api.request('cyclic-queue')).tasks,'task');
-      else if (section === 'Estrutura') rows = this.contextRows(await this.api.request('context?parentType=personal'));
+      else if (section === 'Estrutura') rows = this.contextRows(await this.api.requestWithClosed('context?parentType=personal',this.includeClosed()));
       else if (section === 'Lixeira') rows = this.mark((await this.api.request('recycle-bin/tasks')).tasks,'task');
       else if (section === 'Configurações') {
         const [prefs, sizes, token, transfers, invitations] = await Promise.all([this.api.request('notification-preferences'),this.api.request('preferences/size-labels'),this.api.request('mcp-token'),this.api.request('owner-transfers'),this.api.request('item-invitations')]);
         this.settings.set({...prefs.preferences,...token}); this.sizeLabels=(sizes.labels ?? []).join(', '); this.transfers.set(transfers.requests ?? []); this.invitations.set(invitations.invitations ?? []);
       } else {
-        const resource: Record<string,[string,string,string]> = { Projetos:['projects','projects','project'],Produtos:['products','products','product'],Processos:['processes','processes','process'],Listas:['lists','lists','list'],Lembretes:['reminders','reminders','reminder'],Séries:['recurrence-series','series','series'],Templates:['templates','templates','template'] };
-        const entry=resource[section]; if (entry) rows=this.mark((await this.api.request(entry[0]))[entry[1]],entry[2]);
+        const resource: Record<string,[string,string,string,boolean]> = { Projetos:['projects','projects','project',true],Produtos:['products','products','product',true],Processos:['processes','processes','process',true],Listas:['lists','lists','list',false],Lembretes:['reminders','reminders','reminder',false],Séries:['recurrence-series','series','series',false],Templates:['templates','templates','template',false] };
+        const entry=resource[section]; if (entry) { const data=entry[3]?await this.api.requestWithClosed(entry[0],this.includeClosed()):await this.api.request(entry[0]);rows=this.mark(data[entry[1]],entry[2]); }
       }
       if (version===this.requestVersion) this.rows.set(rows);
-    } catch(e) { this.fail(e); } finally { if (version===this.requestVersion) this.loading.set(false); }
+    } catch(e) { if(version===this.requestVersion)this.fail(e); } finally { if (version===this.requestVersion) this.loading.set(false); }
   }
+  supportsClosedFilters() { return Boolean(this.scope()) || ['Início','Minhas tarefas','Calendário','Quadrante','Projetos','Produtos','Processos','Estrutura'].includes(this.section()); }
+  isClosedIncluded(state:ClosedWorkState) { return this.includeClosed().includes(state); }
+  async toggleClosed(state:ClosedWorkState,checked:boolean) { const selected=new Set(this.includeClosed());if(checked)selected.add(state);else selected.delete(state);this.includeClosed.set(closedWorkStates.filter(value=>selected.has(value)));await this.load(); }
+  reportClosedStates():ClosedWorkState[] { return closedWorkStates.includes(this.reportStatus as ClosedWorkState)?[this.reportStatus as ClosedWorkState]:[]; }
+  async changeReportStatus(status:string) { this.reportStatus=status;await this.load(); }
+  isProcessRoute() { return this.router.url.startsWith('/processos/'); }
   mark(rows: Item[] | undefined, kind:string):Item[] { return (rows ?? []).map(row=>({...row,kind})); }
   contextRows(data: Record<string,any>) { return ['organizations','departments','teams','projects','products','processes','tasks'].flatMap(key=>this.mark(data[key],({organizations:'organization',departments:'department',teams:'team',projects:'project',products:'product',processes:'process',tasks:'task'} as Record<string,string>)[key])); }
   fail(e:unknown) { this.error.set(e instanceof Error ? e.message : 'Não foi possível concluir a operação.'); }
@@ -251,6 +264,7 @@ export class AppComponent implements OnInit, OnDestroy {
     if(['organization','department','team'].includes(row.kind!)) { await this.navigate('Estrutura',row);return; }
     if(row.kind==='list'){await this.navigate('Listas',row);return;}
     if(row.kind==='template'){await this.prepareTemplate(row);return;}
+    if(row.kind==='process'){await this.router.navigate(['/processos',row.id],{state:{fromTaskando:true}});return;}
     this.selected.set(row);this.tab.set('Detalhes');this.detail.set({});await this.loadDetail();
   }
   async openOrganization() {
@@ -278,12 +292,12 @@ export class AppComponent implements OnInit, OnDestroy {
     try {
       const kind=row.kind!,id=row.id;const detail:Record<string,any>={};let children:Item[]=[];
       if(kind==='task') {
-        const [checks,subtasks,comments,audit]=await Promise.all([this.api.request(`tasks/${id}/checklist`),this.api.request(`tasks/${id}/subtasks`),this.api.request(`tasks/${id}/comments`),this.api.request(`tasks/${id}/audit`)]);
+        const [checks,subtasks,comments,audit]=await Promise.all([this.api.request(`tasks/${id}/checklist`),this.api.requestWithClosed(`tasks/${id}/subtasks`,this.includeClosed()),this.api.request(`tasks/${id}/comments`),this.api.request(`tasks/${id}/audit`)]);
         Object.assign(detail,{...checks,...comments,...audit});children=this.mark(subtasks.subtasks,'task');
       } else if(['project','front','product','process','phase'].includes(kind)) {
-        children=this.mark((await this.api.request(`task-containers/${kind}/${id}`)).tasks,'task');
-        if(kind==='project') children.push(...this.mark((await this.api.request(`projects/${id}/fronts`)).fronts,'front'));
-        if(kind==='process') children.push(...this.mark((await this.api.request(`processes/${id}/phases`)).phases,'phase'));
+        children=this.mark((await this.api.requestWithClosed(`task-containers/${kind}/${id}`,this.includeClosed())).tasks,'task');
+        if(kind==='project') children.push(...this.mark((await this.api.requestWithClosed(`projects/${id}/fronts`,this.includeClosed())).fronts,'front'));
+        if(kind==='process') children.push(...this.mark((await this.api.requestWithClosed(`processes/${id}/phases`,this.includeClosed())).phases,'phase'));
         if(['process','phase'].includes(kind)) Object.assign(detail,{graph:await this.api.request(`dependencies?containerType=${kind}&containerId=${id}`)});
         detail['progress']=await this.api.request(`work-progress/${kind}/${id}`);
       }
@@ -329,9 +343,7 @@ export class AppComponent implements OnInit, OnDestroy {
   async revoke(assignment:Item) {const row=this.selected()!;await this.run(async()=>{if(row.kind==='organization')await this.api.request(`organizations/${row.id}/members/${assignment.id}`,'PATCH',{status:'removed'});else await this.api.request('item-roles','DELETE',{itemType:row.kind,itemId:row.id,assignmentId:assignment.id});await this.loadDetail();});}
   async transferOwner() {const row=this.selected()!;if(!await this.ask('Confirmar transferência de Owner?',[{value:'yes',label:'Solicitar transferência'}]))return;await this.run(async()=>{await this.api.request('owner-transfers','POST',{itemType:row.kind,itemId:row.id,proposedOwnerUserId:this.transferTarget,mode:this.transferMode});await this.loadDetail();});}
   async respondTransfer(row:Item,action:string) {await this.run(async()=>{await this.api.request('owner-transfers','PATCH',{id:row.id,action});await this.load();});}
-  async addDependency() {await this.run(async()=>{await this.api.request('dependencies','POST',{predecessorType:this.dependencyKind,predecessorId:this.predecessor,successorType:this.dependencyKind,successorId:this.successor});await this.loadDetail();});}
-  async removeDependency(edge:Item) {await this.run(async()=>{await this.api.request(`dependencies/${edge.id}`,'DELETE',{});await this.loadDetail();});}
-  graphTitle(id:string) {return this.title([...(this.detail()['graph']?.tasks??[]),...(this.detail()['graph']?.phases??[])].find((r:Item)=>r.id===id)??{id,title:id});}
+  updateDetailGraph(graph:DependencyGraph) { this.detail.update(detail=>({...detail,graph})); }
   async saveTemplate() {const row=this.selected()!;await this.run(async()=>{await this.api.request('templates','POST',{sourceType:row.kind,sourceId:row.id,name:this.templateName||this.title(row)});this.notice.set('Template salvo com a estrutura de filhos.');this.templateName='';});}
   async prepareTemplate(row:Item) {await this.run(async()=>{const data=await this.api.request(`templates/${row.id}/instantiate`);this.templateSetup.set({...data.setup,id:row.id});this.templateTitle=data.setup.title;this.templateTarget='0';});}
   async instantiate() {const setup=this.templateSetup()!;await this.run(async()=>{const target=setup['targets'][Number(this.templateTarget)];await this.api.request(`templates/${setup.id}/instantiate`,'POST',{title:this.templateTitle,parentType:target.type,parentId:target.id,startDate:this.templateDate||null});this.templateSetup.set(null);this.notice.set('Estrutura criada a partir do template.');await this.reloadNavigation();await this.load();});}
@@ -346,7 +358,7 @@ export class AppComponent implements OnInit, OnDestroy {
   async generateToken() {if(!await this.ask('Gerar um token invalida o anterior. Continuar?',[{value:'yes',label:'Gerar token'}]))return;await this.run(async()=>{const data=await this.api.request('mcp-token','POST',{});this.token.set(data.secret);});}
   async revokeToken(){await this.run(async()=>{await this.api.request('mcp-token','DELETE',{});this.token.set('');this.notice.set('Token revogado.');});}
   async exportData(){await this.run(async()=>{const data=await this.api.request('privacy/export');const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='taskando-export.json';a.click();URL.revokeObjectURL(url);});}
-  clearReport() { this.reportStart='';this.reportEnd='';this.reportStatus='';this.reportType='';this.reportImportance='';this.reportUrgency=''; }
+  async clearReport() { const reload=Boolean(this.reportStatus);this.reportStart='';this.reportEnd='';this.reportStatus='';this.reportType='';this.reportImportance='';this.reportUrgency='';if(reload)await this.load(); }
   exportReport() {
     const quote = (value: unknown) => `"${String(value ?? '').replaceAll('"','""')}"`;
     const lines = [['Título','Status','Tipo','Importância','Urgência','Prazo','Contêiner','Owner','Responsáveis'], ...this.reportRows().map(task => [this.title(task),this.statuses[task['status']]??task['status'],this.types[task['taskType']]??task['taskType'],this.levelLabels[task['importance']]??'',this.levelLabels[task['urgency']]??'',task['dueDate']??'',task['parentName']??'Área pessoal',task['ownerName']??'',(task['assignees']??[]).map((person:Item)=>person['displayName']).join(', ')])].map(row=>row.map(quote).join(',')).join('\n');

@@ -42,7 +42,19 @@
                   "maximumError": "1.5MB"
                 }
               ]
+            },
+            "development": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true
             }
+          }
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "tsconfig.spec.json",
+            "runner": "vitest"
           }
         },
         "serve": {

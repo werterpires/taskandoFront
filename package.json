@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "ng serve --host 127.0.0.1 --proxy-config proxy.conf.json",
+    "test": "ng test --watch=false",
     "build": "ng build --configuration production",
     "start": "node server.cjs",
     "deploy": "node server.cjs",
@@ -23,6 +24,9 @@
   "devDependencies": {
     "@angular/build": "^21.2.0",
     "@angular/cli": "^21.2.0",
-    "typescript": "~5.9.3"
+    "@angular/compiler-cli": "^21.2.23",
+    "jsdom": "^27.4.0",
+    "typescript": "~5.9.3",
+    "vitest": "^4.0.18"
   }
 }

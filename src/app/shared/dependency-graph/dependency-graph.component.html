@@ -1,0 +1,121 @@
+<section class="dependency-graph" [attr.aria-busy]="pending()" (keydown.escape)="cancelConnection()">
+  <div class="graph-help">
+    <div>
+      <strong>Mapa de dependências</strong>
+      <p>Arraste da porta de saída para a entrada, ou use Enter nas duas portas. Itens arquivados não liberam sucessoras.</p>
+    </div>
+    <div class="graph-legend" aria-label="Legenda do grafo">
+      <span><i data-dependency="released">→</i> Liberado</span>
+      <span><i data-dependency="blocked">⊘</i> Bloqueado</span>
+      <span><i data-dependency="independent">◇</i> Independente</span>
+    </div>
+  </div>
+
+  @if (readOnly) {
+    <p class="graph-readonly" role="status">Grafo em modo somente leitura.</p>
+  }
+  @if (errorMessage()) {
+    <div class="graph-error" role="alert">
+      <span>{{errorMessage()}}</span>
+      <button type="button" aria-label="Fechar erro do grafo" (click)="errorMessage.set('')">×</button>
+    </div>
+  }
+
+  <p class="visually-hidden" aria-live="polite" aria-atomic="true">{{message()}}</p>
+
+  @if (!layout().nodes.length) {
+    <div class="graph-empty"><span>◇</span><p>Nenhuma atividade disponível nesta projeção.</p></div>
+  } @else {
+    <div #viewport class="graph-viewport" tabindex="0" aria-label="Grafo de dependências. Use rolagem para explorar todos os nós.">
+      <div #canvas class="graph-canvas" [style.width.px]="layout().width" [style.height.px]="layout().height">
+        @for (lane of layout().lanes; track lane.type) {
+          <h3 class="graph-lane-title" [style.top.px]="lane.y" [attr.data-lane]="lane.type">{{lane.label}}</h3>
+        }
+
+        <svg class="graph-lines" [attr.width]="layout().width" [attr.height]="layout().height" aria-hidden="true">
+          <defs>
+            <marker [attr.id]="markerId" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="strokeWidth">
+              <path d="M 0 0 L 9 4.5 L 0 9 z"></path>
+            </marker>
+          </defs>
+          @for (placedEdge of layout().edges; track placedEdge.edge.id) {
+            <path class="dependency-line" [attr.d]="placedEdge.path" [attr.marker-end]="'url(#' + markerId + ')'"></path>
+          }
+          @if (previewPath(); as path) {
+            <path class="dependency-line dependency-preview" [attr.d]="path" [attr.marker-end]="'url(#' + markerId + ')'"></path>
+          }
+        </svg>
+
+        @for (placed of layout().nodes; track placed.key) {
+          <article
+            class="dependency-node"
+            [attr.data-node-type]="placed.node.type"
+            [attr.data-work-status]="placed.node.status"
+            [attr.data-dependency-state]="placed.node.dependencyState"
+            [style.left.px]="placed.x"
+            [style.top.px]="placed.y"
+          >
+            <button
+              type="button"
+              class="graph-port graph-port-in"
+              [attr.data-graph-target-key]="placed.key"
+              [attr.aria-label]="'Usar ' + placed.node.title + ' como sucessora'"
+              [disabled]="!targetAvailable(placed.node)"
+              (focus)="previewKeyboardTarget(placed.node)"
+              (click)="activateTarget(placed.node, $event)"
+            ><span aria-hidden="true">›</span></button>
+
+            <div class="node-heading">
+              <small>{{nodeTypeLabel(placed.node)}}</small>
+              <strong>{{placed.node.title}}</strong>
+            </div>
+            <div class="node-states">
+              <span class="node-state work-state" [attr.data-status]="placed.node.status">
+                <i aria-hidden="true">{{statusSymbols[placed.node.status] || '○'}}</i>
+                <span><small>Trabalho</small>{{statusLabels[placed.node.status] || placed.node.status}}</span>
+              </span>
+              <span class="node-state dependency-state" [attr.data-dependency]="placed.node.dependencyState">
+                <i aria-hidden="true">{{dependencySymbols[placed.node.dependencyState]}}</i>
+                <span><small>Disponibilidade</small>{{dependencyLabels[placed.node.dependencyState]}}</span>
+              </span>
+            </div>
+            @if (placed.node.dependencyBlockers.length) {
+              <p class="node-blockers" [attr.title]="blockersLabel(placed.node)">Bloqueado por: {{blockersLabel(placed.node)}}.</p>
+            } @else if (placed.node.status === 'archived') {
+              <p class="node-blockers archived-note">Arquivado: não libera sucessoras.</p>
+            }
+
+            <button
+              type="button"
+              class="graph-port graph-port-out"
+              [class.active]="connection()?.sourceKey === placed.key"
+              [attr.aria-pressed]="connection()?.sourceKey === placed.key"
+              [attr.aria-label]="'Usar ' + placed.node.title + ' como predecessora'"
+              [disabled]="!sourceAvailable(placed.node)"
+              (pointerdown)="startPointer(placed.node, $event)"
+              (pointermove)="movePointer($event)"
+              (pointerup)="endPointer($event)"
+              (pointercancel)="cancelConnection()"
+              (click)="activateSource(placed.node, $event)"
+            ><span aria-hidden="true">›</span></button>
+          </article>
+        }
+
+        @for (placedEdge of layout().edges; track placedEdge.edge.id) {
+          @if (placedEdge.edge.canRemove && !readOnly) {
+            <button
+              type="button"
+              class="remove-edge"
+              [style.left.px]="placedEdge.removeX"
+              [style.top.px]="placedEdge.removeY"
+              [disabled]="pending()"
+              [attr.aria-label]="'Remover ' + edgeLabel(placedEdge.edge).toLocaleLowerCase()"
+              [attr.title]="'Remover ' + edgeLabel(placedEdge.edge).toLocaleLowerCase()"
+              (click)="removeDependency(placedEdge.edge)"
+            >×</button>
+          }
+        }
+      </div>
+    </div>
+  }
+</section>
