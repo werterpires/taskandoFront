@@ -235,6 +235,7 @@ legend { color: #506355; font-weight: 800; }
   .list-heading { display: none; }
   .item-row { grid-template-columns: minmax(150px, 1fr) auto; }
   .item-type, .due { display: none; }
+  .my-tasks-section .due { display: block; grid-column: 1; padding-left: 32px; }
   .cyclic-row { grid-template-columns: minmax(0, 1fr) auto; }
   .cyclic-row .item-title, .cyclic-row .due { grid-column: 1 / -1; }
   .cyclic-row .item-type, .cyclic-row .due { display: block; }
