@@ -221,6 +221,7 @@ export class AppComponent implements OnInit, OnDestroy {
   async logout() { await this.run(async()=>{await this.api.request('auth/logout','POST',{});this.user.set(null);this.showReadNotifications.set(false);this.ngOnDestroy();}); }
   localDate(date:Date) { return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`; }
   title(row:Item) { return row.title ?? row.name ?? ''; }
+  parentChainLabel(row:Item) { return (row['parentChain'] ?? []).map((parent:Item) => this.title(parent)).filter(Boolean).join(' → '); }
   inCell(importance:string,urgency:string) { return this.visible().filter(r=>r['importance']===importance&&r['urgency']===urgency); }
   onDay(day:string) { return this.rows().filter(r => r['taskType']!=='reminder' && (r['dateAt']===day || r['dueDate']===day || r['startAt']?.slice(0,10)===day || (r['taskType']==='event' && r['startAt']?.slice(0,10)<=day && r['endAt']?.slice(0,10)>=day))); }
   async changeMonth(offset:number) { const d=new Date(this.month());d.setMonth(d.getMonth()+offset);this.month.set(d);await this.load(); }
@@ -265,6 +266,10 @@ export class AppComponent implements OnInit, OnDestroy {
     if(row.kind==='list'){await this.navigate('Listas',row);return;}
     if(row.kind==='template'){await this.prepareTemplate(row);return;}
     if(row.kind==='process'){await this.router.navigate(['/processos',row.id],{state:{fromTaskando:true}});return;}
+    const current=this.selected();
+    if(row.kind==='task'&&row['parentTaskId']&&current&&current.id===row['parentTaskId']&&!row['parentChain']?.length) {
+      row={...row,parentChain:[...(current['parentChain']??[]),{type:'task',id:current.id,name:this.title(current)}]};
+    }
     this.selected.set(row);this.tab.set('Detalhes');this.detail.set({});await this.loadDetail();
   }
   async openOrganization() {
