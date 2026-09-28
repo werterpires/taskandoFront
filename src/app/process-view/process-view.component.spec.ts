@@ -1,4 +1,3 @@
-import { Location } from '@angular/common';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { of } from 'rxjs';
@@ -26,7 +25,6 @@ describe('ProcessViewComponent', () => {
         { provide: ApiService, useValue: api },
         { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ id: 'process-1' })) } },
         { provide: Router, useValue: { navigate: vi.fn() } },
-        { provide: Location, useValue: { back: vi.fn() } },
       ],
     }).compileComponents();
 
@@ -52,7 +50,6 @@ describe('ProcessViewComponent', () => {
         { provide: ApiService, useValue: api },
         { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ id: 'process-1' })) } },
         { provide: Router, useValue: { navigate: vi.fn() } },
-        { provide: Location, useValue: { back: vi.fn() } },
       ],
     }).compileComponents();
 
@@ -68,5 +65,22 @@ describe('ProcessViewComponent', () => {
     api.request.mockRejectedValueOnce(new ApiError(403, { error: 'Sem acesso.' }));
     await fixture.componentInstance.load();
     expect(fixture.componentInstance.state()).toBe('forbidden');
+  });
+
+  it('returns a process detail to the process collection', async () => {
+    const router = { navigate: vi.fn() };
+    await TestBed.configureTestingModule({
+      imports: [ProcessViewComponent],
+      providers: [
+        { provide: ApiService, useValue: { request: vi.fn(), requestWithClosed: vi.fn() } },
+        { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ id: 'process-1' })) } },
+        { provide: Router, useValue: router },
+      ],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(ProcessViewComponent);
+    fixture.componentInstance.back();
+    expect(router.navigate).toHaveBeenCalledWith(['/processos']);
+    fixture.destroy();
   });
 });

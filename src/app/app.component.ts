@@ -1,8 +1,10 @@
 import { Component, OnInit, OnDestroy, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
+import { Subscription, filter } from 'rxjs';
 import { ApiError, ApiService, ClosedWorkState, Item, closedWorkStates } from './api.service';
+import { fixedRoute, navigation, routeScope, scopedRoute, sectionForRoute, type RouteScope } from './navigation';
 import { orderTasks } from './task-order';
 import { environment } from '../environments/environment';
 import { DependencyGraph, DependencyGraphComponent, EMPTY_DEPENDENCY_GRAPH } from './shared/dependency-graph/dependency-graph.component';
@@ -17,8 +19,7 @@ export class AppComponent implements OnInit, OnDestroy {
   loginEmail = ''; loginPassword = '';
   newUserDisplayName = ''; newUserEmail = ''; newUserPassword = '';
   currentPassword = ''; newPassword = '';
-  navigation = ['Início', 'Minhas tarefas', 'Cíclicas', 'Lembretes', 'Calendário', 'Quadrante', 'Painel', 'Relatórios', 'Listas', 'Projetos', 'Produtos', 'Processos', 'Séries', 'Templates', 'Estrutura', 'Lixeira', 'Configurações'];
-  icons = ['⌂','✓','↻','♧','▦','⊞','◷','▤','☷','◇','◈','⇢','⟳','▧','⌘','♲','⚙'];
+  readonly navigation = navigation;
   statuses: Record<string,string> = { planned:'Planejado', todo:'A fazer', in_progress:'Em execução', awaiting_approval:'Aguardando aprovação', completed:'Concluído', cancelled:'Cancelado', archived:'Arquivado', active:'Ativo', inactive:'Inativo' };
   types: Record<string,string> = { simple:'Simples', recurring:'Recorrente', commitment:'Compromisso', scheduled:'Agendada', date:'Data', event:'Evento', cyclic:'Cíclica', periodic:'Periódica' };
   labels: Record<string,string> = { task:'Tarefa', project:'Projeto', front:'Frente', product:'Produto', process:'Processo', phase:'Fase', department:'Departamento', team:'Time', organization:'Organização', list:'Lista', reminder:'Lembrete' };
@@ -51,7 +52,7 @@ export class AppComponent implements OnInit, OnDestroy {
   readonly mcpUrl = `${environment.apiBaseUrl || location.origin}/api/integrations/mcp`;
   templateSetup = signal<Item | null>(null); templateTarget = '0'; templateTitle = ''; templateDate = '';
   decision = signal<{ title: string; options: { value:string; label:string }[]; resolve:(v:string|null)=>void } | null>(null);
-  private timer?: ReturnType<typeof setInterval>; private requestVersion = 0; private notificationRequestVersion = 0;
+  private timer?: ReturnType<typeof setInterval>; private requestVersion = 0; private notificationRequestVersion = 0; private routeSubscription?: Subscription; private activeRouteScope: RouteScope | null = null;
   visibleNotifications = computed(() => this.showReadNotifications() ? this.notifications() : this.notifications().filter(row => !row['readAt']));
   taskCollection = computed(() => this.section() === 'Minhas tarefas' || this.scope()?.kind === 'list');
   kanbanStatuses = computed(() => this.workStatuses.filter(status => !closedWorkStates.includes(status as ClosedWorkState) || this.includeClosed().includes(status as ClosedWorkState)));
@@ -127,15 +128,24 @@ export class AppComponent implements OnInit, OnDestroy {
     return Array.from({length:42}, (_, i) => { const d = new Date(start); d.setDate(start.getDate()+i); return { key:this.localDate(d), day:d.getDate(), current:d.getMonth()===this.month().getMonth() }; });
   });
   async ngOnInit() {
+    this.routeSubscription = this.router.events.pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd)).subscribe(() => {
+      if (this.user()) void this.applyRoute();
+    });
     try { const data = await this.api.request('auth/me'); this.user.set(data.user); await this.bootstrap(); }
     catch (e) { if (!(e instanceof ApiError && e.status === 401)) this.fail(e); }
     finally { this.authenticating.set(false); }
   }
-  ngOnDestroy() { if (this.timer) clearInterval(this.timer); this.timer = undefined; }
-  async bootstrap() { await this.reloadNavigation(); await this.load(); await this.poll(); if (this.user()) this.timer = setInterval(() => void this.poll(), 30_000); }
-  async reloadNavigation() {
-    const [orgs, lists, tasks] = await Promise.all([this.api.request('organizations'),this.api.request('lists'),this.api.request('tasks')]);
-    this.organizations.set(orgs.organizations ?? []); this.invitations.set(orgs.invitations ?? []); this.lists.set(lists.lists ?? []); this.tasks.set(this.mark(tasks.tasks,'task'));
+  ngOnDestroy() { if (this.timer) clearInterval(this.timer); this.timer = undefined; this.requestVersion += 1; this.routeSubscription?.unsubscribe(); }
+  async bootstrap() {
+    const initialSection = this.currentRoute()?.section;
+    await this.reloadNavigation(initialSection !== 'Minhas tarefas');
+    if (!this.isProcessRoute()) await this.applyRoute();
+    await this.poll(); if (this.user()) this.timer = setInterval(() => void this.poll(), 30_000);
+  }
+  async reloadNavigation(includeTasks = true) {
+    const [orgs, lists, taskData] = await Promise.all([this.api.request('organizations'),this.api.request('lists'),includeTasks ? this.api.request('tasks') : Promise.resolve(null)]);
+    this.organizations.set(orgs.organizations ?? []); this.invitations.set(orgs.invitations ?? []); this.lists.set(lists.lists ?? []);
+    if (taskData) this.tasks.set(this.mark(taskData.tasks,'task'));
   }
   async poll() {
     if (!this.user()) return;
@@ -160,15 +170,44 @@ export class AppComponent implements OnInit, OnDestroy {
     if (reminders.status === 'fulfilled' && reminders.value.reminders?.length) this.dueReminders.update(old => [...old, ...reminders.value.reminders]);
   }
   async toggleReadNotifications() { this.showReadNotifications.set(!this.showReadNotifications()); await this.poll(); }
-  async navigate(section: string, scope: Item | null = null) { await this.router.navigate(['/']);this.section.set(section); this.scope.set(scope); this.selected.set(null); this.search.set(''); this.mobile.set(false); this.error.set(''); await this.load(); }
+  async navigate(section: string, scope: Item | null = null) {
+    this.mobile.set(false);
+    const route = scope && ['list', 'organization', 'department', 'team'].includes(scope.kind ?? '')
+      ? scopedRoute({ kind: scope.kind as RouteScope['kind'], id: scope.id })
+      : [fixedRoute(section)];
+    await this.router.navigate(route);
+  }
+  private currentRoute(): { section: string | null; scope: RouteScope | null } | null {
+    const segments = this.router.parseUrl(this.router.url).root.children['primary']?.segments.map(segment => segment.path) ?? [];
+    if (segments[0] === 'processos' && segments.length === 2) return null;
+    return { section: sectionForRoute(segments), scope: routeScope(segments) };
+  }
+  private async applyRoute() {
+    const route = this.currentRoute();
+    if (!route?.section) return;
+    this.requestVersion += 1;
+    this.activeRouteScope = route.scope;
+    this.section.set(route.section);
+    this.scope.set(null);
+    this.rows.set([]);
+    this.selected.set(null);
+    this.search.set('');
+    this.mobile.set(false);
+    this.error.set('');
+    await this.load();
+  }
   async load() {
     const version = ++this.requestVersion; this.loading.set(true); this.error.set('');
     try {
-      let rows: Item[] = []; const section = this.section(), scope = this.scope();
+      let rows: Item[] = []; const section = this.section(), scope = this.activeRouteScope ?? this.scope();
       if (scope?.kind === 'list') {
-        const data = await this.api.requestWithClosed(`lists/${scope.id}/tasks`,this.includeClosed()); rows = this.mark(data.tasks,'task');
+        const data = await this.api.requestWithClosed(`lists/${scope.id}/tasks`,this.includeClosed());
+        if (version === this.requestVersion) this.scope.set({ ...data.list, kind: 'list' });
+        rows = this.mark(data.tasks,'task');
       } else if (scope) {
-        const data = await this.api.requestWithClosed(`context?parentType=${scope.kind}&parentId=${scope.id}`,this.includeClosed()); rows = this.contextRows(data);
+        const data = await this.api.requestWithClosed(`context?parentType=${scope.kind}&parentId=${scope.id}`,this.includeClosed());
+        if (version === this.requestVersion) this.scope.set(data.scope ?? null);
+        rows = this.contextRows(data);
       } else if (section === 'Painel') {
         const [matrix, taskData] = await Promise.all([this.api.requestWithClosed('priority-matrix',closedWorkStates), this.api.request('tasks')]);
         this.tasks.set(this.mark(taskData.tasks,'task')); rows = matrix.items ?? [];

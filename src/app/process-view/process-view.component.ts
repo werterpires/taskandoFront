@@ -1,4 +1,4 @@
-import { CommonModule, Location } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -19,7 +19,6 @@ export class ProcessViewComponent implements OnInit, OnDestroy {
   private readonly api = inject(ApiService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-  private readonly location = inject(Location);
   private routeSubscription?: Subscription;
   private requestVersion = 0;
   private processId = '';
@@ -136,11 +135,7 @@ export class ProcessViewComponent implements OnInit, OnDestroy {
   }
 
   back(): void {
-    if (globalThis.history?.state?.['fromTaskando']) {
-      this.location.back();
-      return;
-    }
-    void this.router.navigate(['/']);
+    void this.router.navigate(['/processos']);
   }
 
   isIncluded(state: ClosedWorkState): boolean {
