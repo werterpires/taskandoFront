@@ -209,6 +209,29 @@ legend { color: #506355; font-weight: 800; }
 .process-columns header > span, .process-section-heading > span { color: var(--muted); font-size: 11px; font-weight: 700; }
 .process-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; border-bottom: 1px solid #edf0ec; padding: 14px 18px; }
 .process-item p { overflow: hidden; margin: 4px 0 0; color: var(--muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+button.process-item {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid #edf0ec;
+  border-radius: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  transition: background 0.15s ease-in-out;
+}
+button.process-item:hover {
+  background: #f7faf6;
+}
+button.process-item:focus-visible {
+  outline: 2px solid #78947d;
+  outline-offset: -2px;
+  background: #f7faf6;
+}
+button.process-item > div {
+  min-width: 0;
+}
 .process-column-empty { padding: 18px; }
 .dependency-projection { margin-bottom: 16px; }
 .process-section-heading .eyebrow { margin-bottom: 4px !important; }

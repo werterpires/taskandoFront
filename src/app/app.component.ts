@@ -9,11 +9,14 @@ import { orderTasks } from './task-order';
 import { environment } from '../environments/environment';
 import { DependencyGraph, DependencyGraphComponent, EMPTY_DEPENDENCY_GRAPH } from './shared/dependency-graph/dependency-graph.component';
 
+import { DrawerService } from './shared/drawer.service';
+
 const paths: Record<string, string> = { task: 'tasks', project: 'projects', front: 'fronts', product: 'products', process: 'processes', phase: 'phases', organization: 'organizations', list: 'lists', reminder: 'reminders', series: 'recurrence-series' };
 @Component({ selector: 'app-root', standalone: true, imports: [CommonModule, FormsModule, RouterOutlet, DependencyGraphComponent], templateUrl: './app.component.html' })
 export class AppComponent implements OnInit, OnDestroy {
   api = inject(ApiService);
   router = inject(Router);
+  drawer = inject(DrawerService);
   user = signal<Item | null>(null); authenticating = signal(true); loading = signal(false); saving = signal(false);
   error = signal(''); notice = signal(''); section = signal('Início'); mobile = signal(false);
   loginEmail = ''; loginPassword = '';
@@ -30,8 +33,12 @@ export class AppComponent implements OnInit, OnDestroy {
   notifications = signal<Item[]>([]); unreadNotificationCount = signal(0); showReadNotifications = signal(false);
   notificationsLoading = signal(false); notificationsError = signal('');
   invitations = signal<Item[]>([]); transfers = signal<Item[]>([]); dueReminders = signal<Item[]>([]);
-  scope = signal<Item | null>(null); selected = signal<Item | null>(null); children = signal<Item[]>([]);
-  detail = signal<Record<string,any>>({}); tab = signal('Detalhes'); showNotifications = signal(false);
+  scope = signal<Item | null>(null);
+  selected = this.drawer.openedItem;
+  children = this.drawer.children;
+  detail = this.drawer.detail;
+  tab = this.drawer.initialTab;
+  showNotifications = signal(false);
   search = signal(''); view = signal('list'); temporal = signal('all');
   includeClosed = signal<ClosedWorkState[]>([]);
   readonly closedStates = closedWorkStates;
@@ -299,17 +306,18 @@ export class AppComponent implements OnInit, OnDestroy {
     const data=await this.api.request(path,this.editorId?'PATCH':'POST',payload);
     this.editing.set(false);this.notice.set('Salvo.');await this.reloadNavigation();await this.load();
     if(this.selected()) { const updated=data[kind]??data.item;if(updated) this.selected.set({...this.selected(),...updated});await this.loadDetail(); }
+    this.drawer.notifyMutation(this.selected() ?? data[kind] ?? data.item, this.editorId ? 'update' : 'create');
   }); }
   async open(row:Item) {
     if(['organization','department','team'].includes(row.kind!)) { await this.navigate('Estrutura',row);return; }
     if(row.kind==='list'){await this.navigate('Listas',row);return;}
     if(row.kind==='template'){await this.prepareTemplate(row);return;}
     if(row.kind==='process'){await this.router.navigate(['/processos',row.id],{state:{fromTaskando:true}});return;}
-    const current=this.selected();
-    if(row.kind==='task'&&row['parentTaskId']&&current&&current.id===row['parentTaskId']&&!row['parentChain']?.length) {
-      row={...row,parentChain:[...(current['parentChain']??[]),{type:'task',id:current.id,name:this.title(current)}]};
+    try {
+      await this.drawer.open(row, 'Detalhes', this.includeClosed());
+    } catch(e) {
+      this.fail(e);
     }
-    this.selected.set(row);this.tab.set('Detalhes');this.detail.set({});await this.loadDetail();
   }
   async openOrganization() {
     const organization = this.scope();
@@ -332,32 +340,14 @@ export class AppComponent implements OnInit, OnDestroy {
     });
   }
   async loadDetail() {
-    const row=this.selected();if(!row)return;
     try {
-      const kind=row.kind!,id=row.id;const detail:Record<string,any>={};let children:Item[]=[];
-      if(kind==='task') {
-        const [checks,subtasks,comments,audit]=await Promise.all([this.api.request(`tasks/${id}/checklist`),this.api.requestWithClosed(`tasks/${id}/subtasks`,this.includeClosed()),this.api.request(`tasks/${id}/comments`),this.api.request(`tasks/${id}/audit`)]);
-        Object.assign(detail,{...checks,...comments,...audit});children=this.mark(subtasks.subtasks,'task');
-      } else if(['project','front','product','process','phase'].includes(kind)) {
-        children=this.mark((await this.api.requestWithClosed(`task-containers/${kind}/${id}`,this.includeClosed())).tasks,'task');
-        if(kind==='project') children.push(...this.mark((await this.api.requestWithClosed(`projects/${id}/fronts`,this.includeClosed())).fronts,'front'));
-        if(kind==='process') children.push(...this.mark((await this.api.requestWithClosed(`processes/${id}/phases`,this.includeClosed())).phases,'phase'));
-        if(['process','phase'].includes(kind)) Object.assign(detail,{graph:await this.api.request(`dependencies?containerType=${kind}&containerId=${id}`)});
-        detail['progress']=await this.api.request(`work-progress/${kind}/${id}`);
-      }
-      if(kind === 'organization') {
-        const [members, audit] = await Promise.all([this.api.request(`organizations/${id}/members`), this.api.request(`organizations/${id}/audit`)]);
-        detail['access'] = { owner: members.owner, assignments: members.members ?? [], canManage: members.capabilities?.canAddMembers ?? false };
-        detail['events'] = audit.events ?? [];
-      } else if(!['reminder','series'].includes(kind)) {
-        detail['access']=await this.api.request(`item-roles?itemType=${kind}&itemId=${id}`);
-        detail['transfer']=await this.api.request(`owner-transfers?itemType=${kind}&itemId=${id}`);
-      }
-      this.children.set(children);this.detail.set(detail);
-    } catch(e){this.fail(e);}
+      await this.drawer.loadDetail(this.selected(), this.includeClosed());
+    } catch(e) {
+      this.fail(e);
+    }
   }
   async patch(row:Item,payload:Record<string,any>) {
-    try { const data=await this.api.request(`${paths[row.kind!]}/${row.id}`,'PATCH',payload);if(this.selected()?.id===row.id)this.selected.set({...row,...data[row.kind!]});await this.reloadNavigation();await this.load();if(this.selected())await this.loadDetail(); }
+    try { const data=await this.api.request(`${paths[row.kind!]}/${row.id}`,'PATCH',payload);if(this.selected()?.id===row.id)this.selected.set({...row,...data[row.kind!]});await this.reloadNavigation();await this.load();if(this.selected())await this.loadDetail();this.drawer.notifyMutation(row,'patch'); }
     catch(e) {
       if(e instanceof ApiError && (e.details['requiresSubtaskResolution'] || e.details['requiresCancelDecision'] || e.details['requiresDecision'] || e.status===409)) {
         let extra:Record<string,string>|null=null;
@@ -374,15 +364,15 @@ export class AppComponent implements OnInit, OnDestroy {
   answer(value:string|null) {const d=this.decision();this.decision.set(null);d?.resolve(value);}
   async remove(row:Item) {
     const answer=await this.ask(row.kind==='task'?'Mover esta tarefa para a lixeira?':'Remover este item?',[{value:'yes',label:'Confirmar remoção'}]);if(!answer)return;
-    await this.run(async()=>{await this.api.request(row.kind==='reminder'?'reminders':`${paths[row.kind!]}/${row.id}`,'DELETE',row.kind==='reminder'?{id:row.id}:{});this.selected.set(null);await this.reloadNavigation();await this.load();});
+    await this.run(async()=>{await this.api.request(row.kind==='reminder'?'reminders':`${paths[row.kind!]}/${row.id}`,'DELETE',row.kind==='reminder'?{id:row.id}:{});this.selected.set(null);await this.reloadNavigation();await this.load();this.drawer.notifyMutation(row,'delete');});
   }
   async restore(row:Item) {await this.run(async()=>{await this.api.request('recycle-bin/tasks','POST',{id:row.id});await this.reloadNavigation();await this.load();});}
-  async approve(decision:string) {const row=this.selected()!;await this.run(async()=>{await this.api.request('approvals','POST',{subjectType:row.kind,subjectId:row.id,decision});this.selected.set(null);await this.load();});}
-  async addChecklist() {await this.run(async()=>{await this.api.request(`tasks/${this.selected()!.id}/checklist`,'POST',{title:this.newText});this.newText='';await this.loadDetail();});}
-  async toggleCheck(item:Item) {await this.run(async()=>{await this.api.request(`tasks/${this.selected()!.id}/checklist/${item.id}`,'PATCH',{completed:!item['completed']});await this.loadDetail();});}
-  async deleteCheck(item:Item) {await this.run(async()=>{await this.api.request(`tasks/${this.selected()!.id}/checklist/${item.id}`,'DELETE',{});await this.loadDetail();});}
-  async comment() {await this.run(async()=>{await this.api.request(`tasks/${this.selected()!.id}/comments`,'POST',{body:this.newText});this.newText='';await this.loadDetail();});}
-  async deleteComment(item:Item) {await this.run(async()=>{await this.api.request(`tasks/${this.selected()!.id}/comments/${item.id}`,'DELETE',{});await this.loadDetail();});}
+  async approve(decision:string) {const row=this.selected()!;await this.run(async()=>{await this.api.request('approvals','POST',{subjectType:row.kind,subjectId:row.id,decision});this.selected.set(null);await this.load();this.drawer.notifyMutation(row,'approve');});}
+  async addChecklist() {await this.run(async()=>{await this.api.request(`tasks/${this.selected()!.id}/checklist`,'POST',{title:this.newText});this.newText='';await this.loadDetail();this.drawer.notifyMutation(this.selected()!,'checklist');});}
+  async toggleCheck(item:Item) {await this.run(async()=>{await this.api.request(`tasks/${this.selected()!.id}/checklist/${item.id}`,'PATCH',{completed:!item['completed']});await this.loadDetail();this.drawer.notifyMutation(this.selected()!,'checklist');});}
+  async deleteCheck(item:Item) {await this.run(async()=>{await this.api.request(`tasks/${this.selected()!.id}/checklist/${item.id}`,'DELETE',{});await this.loadDetail();this.drawer.notifyMutation(this.selected()!,'checklist');});}
+  async comment() {await this.run(async()=>{await this.api.request(`tasks/${this.selected()!.id}/comments`,'POST',{body:this.newText});this.newText='';await this.loadDetail();this.drawer.notifyMutation(this.selected()!,'comment');});}
+  async deleteComment(item:Item) {await this.run(async()=>{await this.api.request(`tasks/${this.selected()!.id}/comments/${item.id}`,'DELETE',{});await this.loadDetail();this.drawer.notifyMutation(this.selected()!,'comment');});}
   async invite() {const row=this.selected()??this.scope();if(!row)return;await this.run(async()=>{if(row.kind==='organization')await this.api.request(`organizations/${row.id}/members`,'POST',{email:this.inviteEmail,role:this.inviteRole});else await this.api.request('item-roles','POST',{itemType:row.kind,itemId:row.id,email:this.inviteEmail,role:this.inviteRole});this.inviteEmail='';await this.loadDetail();});}
   async revoke(assignment:Item) {const row=this.selected()!;await this.run(async()=>{if(row.kind==='organization')await this.api.request(`organizations/${row.id}/members/${assignment.id}`,'PATCH',{status:'removed'});else await this.api.request('item-roles','DELETE',{itemType:row.kind,itemId:row.id,assignmentId:assignment.id});await this.loadDetail();});}
   async transferOwner() {const row=this.selected()!;if(!await this.ask('Confirmar transferência de Owner?',[{value:'yes',label:'Solicitar transferência'}]))return;await this.run(async()=>{await this.api.request('owner-transfers','POST',{itemType:row.kind,itemId:row.id,proposedOwnerUserId:this.transferTarget,mode:this.transferMode});await this.loadDetail();});}

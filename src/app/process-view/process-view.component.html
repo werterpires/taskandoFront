@@ -68,14 +68,20 @@
           <section>
             <header><h2>Fases</h2><span>{{visiblePhases().length}}</span></header>
             @for (phase of visiblePhases(); track phase.id) {
-              <article class="process-item"><div><strong>{{phase.title}}</strong><p>{{phase['description'] || 'Sem descrição.'}}</p></div><span class="badge" [attr.data-status]="phase['status']">{{statusLabels[phase['status']] || phase['status']}}</span></article>
+              <button type="button" class="process-item" [attr.aria-label]="'Abrir fase ' + phase.title" (click)="openPhase(phase)">
+                <div><strong>{{phase.title}}</strong><p>{{phase['description'] || 'Sem descrição.'}}</p></div>
+                <span class="badge" [attr.data-status]="phase['status']">{{statusLabels[phase['status']] || phase['status']}}</span>
+              </button>
             }
             @if (!visiblePhases().length) { <p class="muted process-column-empty">Nenhuma fase neste recorte.</p> }
           </section>
           <section>
             <header><h2>Tarefas diretas</h2><span>{{visibleTasks().length}}</span></header>
             @for (task of visibleTasks(); track task.id) {
-              <article class="process-item"><div><strong>{{task.title}}</strong><p>{{task['description'] || task['dueDate'] || 'Sem descrição ou prazo.'}}</p></div><span class="badge" [attr.data-status]="task['status']">{{statusLabels[task['status']] || task['status']}}</span></article>
+              <button type="button" class="process-item" [attr.aria-label]="'Abrir tarefa ' + task.title" (click)="openTask(task)">
+                <div><strong>{{task.title}}</strong><p>{{task['description'] || task['dueDate'] || 'Sem descrição ou prazo.'}}</p></div>
+                <span class="badge" [attr.data-status]="task['status']">{{statusLabels[task['status']] || task['status']}}</span>
+              </button>
             }
             @if (!visibleTasks().length) { <p class="muted process-column-empty">Nenhuma tarefa direta neste recorte.</p> }
           </section>

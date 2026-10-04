@@ -28,8 +28,9 @@
 .dependency-node[data-work-status="completed"] { border-left-color: #65916c; }
 .dependency-node[data-work-status="cancelled"] { border-left-color: #b06b63; }
 .dependency-node[data-work-status="archived"] { border-left-color: #8a908a; background: #f7f8f6; }
-.dependency-node[data-dependency-state="blocked"] { box-shadow: 0 0 0 2px #efd5d1, 0 7px 22px #243b2912; }
-.node-heading { display: grid; min-width: 0; gap: 3px; }
+.node-heading { display: grid; min-width: 0; gap: 3px; border: 0; background: transparent; padding: 0; text-align: left; cursor: pointer; color: inherit; font: inherit; border-radius: 4px; }
+.node-heading:hover strong { color: #1f3725; text-decoration: underline; }
+.node-heading:focus-visible { outline: 2px solid #78947d; outline-offset: 2px; }
 .node-heading small { color: #7f8d82; font-size: 9px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
 .node-heading strong { overflow: hidden; color: #314937; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
 .node-states { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }

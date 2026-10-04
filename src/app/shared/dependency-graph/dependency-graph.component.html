@@ -65,10 +65,15 @@
               (click)="activateTarget(placed.node, $event)"
             ><span aria-hidden="true">›</span></button>
 
-            <div class="node-heading">
+            <button
+              type="button"
+              class="node-heading"
+              [attr.aria-label]="'Abrir detalhes de ' + placed.node.title"
+              (click)="openNode(placed.node)"
+            >
               <small>{{nodeTypeLabel(placed.node)}}</small>
               <strong>{{placed.node.title}}</strong>
-            </div>
+            </button>
             <div class="node-states">
               <span class="node-state work-state" [attr.data-status]="placed.node.status">
                 <i aria-hidden="true">{{statusSymbols[placed.node.status] || '○'}}</i>

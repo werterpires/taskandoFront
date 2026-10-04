@@ -1,10 +1,11 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { ApiError, ApiService, ClosedWorkState, Item, closedWorkStates } from '../api.service';
 import { DependencyGraph, DependencyGraphComponent } from '../shared/dependency-graph/dependency-graph.component';
+import { DrawerService } from '../shared/drawer.service';
 
 type LoadState = 'loading' | 'ready' | 'forbidden' | 'not-found' | 'temporary-error';
 type Progress = { percentage: number; completed: number; total: number; excluded: number; visible: number };
@@ -19,6 +20,7 @@ export class ProcessViewComponent implements OnInit, OnDestroy {
   private readonly api = inject(ApiService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly drawer = inject(DrawerService);
   private routeSubscription?: Subscription;
   private requestVersion = 0;
   private processId = '';
@@ -72,6 +74,27 @@ export class ProcessViewComponent implements OnInit, OnDestroy {
   });
   hasVisibleContent = computed(() => this.visiblePhases().length > 0 || this.visibleTasks().length > 0);
   graphNodes = computed(() => [...this.graph().phases, ...this.graph().tasks]);
+
+  constructor() {
+    effect(() => {
+      const refresh = this.drawer.refreshNotification();
+      if (refresh > 0) {
+        untracked(() => {
+          if (this.processId && this.state() === 'ready') {
+            void this.load();
+          }
+        });
+      }
+    });
+  }
+
+  async openPhase(phase: Item): Promise<void> {
+    await this.drawer.open(phase, 'Filhos');
+  }
+
+  async openTask(task: Item): Promise<void> {
+    await this.drawer.open(task, 'Detalhes');
+  }
 
   ngOnInit(): void {
     this.routeSubscription = this.route.paramMap.subscribe(params => {
