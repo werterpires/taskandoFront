@@ -1,0 +1,159 @@
+<div class="page process-page task-page">
+  <button class="process-back" (click)="back()">{{backLabel()}}</button>
+
+  @if (state() === 'loading') {
+    <section class="surface process-state" role="status">
+      <span class="empty-symbol">❧</span>
+      <h2>Carregando a tarefa…</h2>
+      <p>Estamos reunindo detalhes, checklists, comentários e histórico.</p>
+    </section>
+  } @else if (state() === 'forbidden' || state() === 'not-found') {
+    <section class="surface process-state" role="alert">
+      <span class="empty-symbol">◇</span>
+      <h2>{{state() === 'forbidden' ? 'Acesso indisponível' : 'Tarefa não encontrada'}}</h2>
+      <p>{{errorMessage()}}</p>
+      <button (click)="back()">Voltar</button>
+    </section>
+  } @else if (state() === 'temporary-error') {
+    <section class="surface process-state" role="alert">
+      <span class="empty-symbol">↻</span>
+      <h2>Falha temporária</h2>
+      <p>{{errorMessage()}}</p>
+      <div class="actions"><button (click)="back()">Voltar</button><button class="primary" (click)="load()">Tentar novamente</button></div>
+    </section>
+  } @else if (task(); as item) {
+    <section class="page-heading process-heading">
+      <div>
+        <p class="eyebrow">{{item['parentName'] ? 'TAREFA · ' + item['parentName'] : 'TAREFA'}}</p>
+        <h1>{{item.title}}</h1>
+        <p class="description">{{item['description'] || 'Sem descrição.'}}</p>
+      </div>
+      <div class="actions">
+        <button [class.pinned]="item['pinnedForToday']" (click)="togglePin()" aria-label="Fixar para hoje">
+          {{item['pinnedForToday'] ? '★ Fixada para hoje' : '☆ Fixar para hoje'}}
+        </button>
+        <label class="status-select-label">
+          <select [ngModel]="item['status']" (ngModelChange)="updateStatus($event)" [disabled]="saving()">
+            @for (st of statuses; track st) {
+              <option [value]="st">{{statusLabels[st] || st}}</option>
+            }
+          </select>
+        </label>
+      </div>
+    </section>
+
+    @if (errorMessage()) {
+      <div class="error" role="alert">{{errorMessage()}}<button aria-label="Fechar erro" (click)="errorMessage.set('')">×</button></div>
+    }
+
+    <section class="stats process-stats">
+      <article>
+        <span>Status</span>
+        <strong class="badge" [attr.data-status]="item['status']">{{statusLabels[item['status']] || item['status']}}</strong>
+        <small>{{item['status'] === 'completed' ? 'Finalizada' : 'Em andamento'}}</small>
+      </article>
+      <article>
+        <span>Prazo</span>
+        <strong>{{item['dueDate'] || 'Sem prazo'}}</strong>
+        <small>{{item['pinnedForToday'] ? 'Fixada para hoje' : 'Prazo programado'}}</small>
+      </article>
+      <article>
+        <span>Tamanho / Prioridade</span>
+        <strong>{{sizeLabels[item['size']] || '—'}}</strong>
+        <small>Imp: {{priorityLabels[item['importance']] || '—'}} · Urg: {{priorityLabels[item['urgency']] || '—'}}</small>
+      </article>
+    </section>
+
+    <section class="surface">
+      <div class="toolbar">
+        <div class="tabs">
+          <button [class.chosen]="activeTab() === 'checklist'" (click)="activeTab.set('checklist')">
+            Checklist ({{checklist().length}})
+          </button>
+          <button [class.chosen]="activeTab() === 'subtasks'" (click)="activeTab.set('subtasks')">
+            Subtarefas ({{subtasks().length}})
+          </button>
+          <button [class.chosen]="activeTab() === 'comments'" (click)="activeTab.set('comments')">
+            Comentários ({{comments().length}})
+          </button>
+          <button [class.chosen]="activeTab() === 'audit'" (click)="activeTab.set('audit')">
+            Histórico ({{audit().length}})
+          </button>
+        </div>
+      </div>
+
+      @if (activeTab() === 'checklist') {
+        <div class="detail-section">
+          <form class="inline-form" (ngSubmit)="addChecklistItem()">
+            <input name="checklistText" [(ngModel)]="newChecklistText" placeholder="Adicionar item ao checklist…" maxlength="255">
+            <button class="primary" [disabled]="saving() || !newChecklistText.trim()">+ Adicionar</button>
+          </form>
+          @for (check of checklist(); track check.id) {
+            <div class="check-row">
+              <label class="check-label">
+                <input type="checkbox" [checked]="check.completed" (change)="toggleChecklistItem(check)">
+                <span [style.text-decoration]="check.completed ? 'line-through' : 'none'">{{check.text}}</span>
+              </label>
+              <button aria-label="Excluir item" (click)="deleteChecklistItem(check)">×</button>
+            </div>
+          }
+          @if (!checklist().length) {
+            <p class="muted">Nenhum item de verificação no checklist.</p>
+          }
+        </div>
+      }
+
+      @if (activeTab() === 'subtasks') {
+        <div class="detail-section">
+          <form class="inline-form" (ngSubmit)="addSubtask()">
+            <input name="subtaskTitle" [(ngModel)]="newSubtaskTitle" placeholder="Título da nova subtarefa…" maxlength="140">
+            <button class="primary" [disabled]="saving() || !newSubtaskTitle.trim()">+ Criar subtarefa</button>
+          </form>
+          @for (sub of subtasks(); track sub.id) {
+            <button type="button" class="process-item" (click)="openSubtask(sub)">
+              <div><strong>{{sub.title}}</strong><p>{{sub['dueDate'] || 'Sem prazo'}}</p></div>
+              <span class="badge" [attr.data-status]="sub['status']">{{statusLabels[sub['status']] || sub['status']}}</span>
+            </button>
+          }
+          @if (!subtasks().length) {
+            <p class="muted">Nenhuma subtarefa registrada.</p>
+          }
+        </div>
+      }
+
+      @if (activeTab() === 'comments') {
+        <div class="detail-section">
+          <form (ngSubmit)="addComment()" style="display: grid; gap: 8px; margin-bottom: 16px;">
+            <textarea name="commentText" [(ngModel)]="newCommentText" rows="3" placeholder="Escreva um comentário…"></textarea>
+            <div style="display: flex; justify-content: flex-end;">
+              <button class="primary" [disabled]="saving() || !newCommentText.trim()">Enviar comentário</button>
+            </div>
+          </form>
+          @for (comm of comments(); track comm.id) {
+            <div class="comment">
+              <p>{{comm.body}}</p>
+              <small class="muted">{{comm.authorName || 'Usuário'}} · {{comm.createdAt | date:'dd/MM/yyyy HH:mm'}}</small>
+            </div>
+          }
+          @if (!comments().length) {
+            <p class="muted">Nenhum comentário nesta tarefa.</p>
+          }
+        </div>
+      }
+
+      @if (activeTab() === 'audit') {
+        <div class="detail-section">
+          @for (event of audit(); track event.id) {
+            <div class="comment">
+              <p><strong>{{event.actorName || 'Usuário'}}</strong> {{event.summary}}</p>
+              <small class="muted">{{event.createdAt | date:'dd/MM/yyyy HH:mm'}}</small>
+            </div>
+          }
+          @if (!audit().length) {
+            <p class="muted">Nenhum registro de auditoria disponível.</p>
+          }
+        </div>
+      }
+    </section>
+  }
+</div>

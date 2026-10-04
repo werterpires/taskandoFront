@@ -146,7 +146,7 @@ export class AppComponent implements OnInit, OnDestroy {
   async bootstrap() {
     const initialSection = this.currentRoute()?.section;
     await this.reloadNavigation(initialSection !== 'Minhas tarefas');
-    if (!this.isProcessRoute()) await this.applyRoute();
+    if (!this.isStandaloneRoute()) await this.applyRoute();
     await this.poll(); if (this.user()) this.timer = setInterval(() => void this.poll(), 30_000);
   }
   async reloadNavigation(includeTasks = true) {
@@ -186,7 +186,8 @@ export class AppComponent implements OnInit, OnDestroy {
   }
   private currentRoute(): { section: string | null; scope: RouteScope | null } | null {
     const segments = this.router.parseUrl(this.router.url).root.children['primary']?.segments.map(segment => segment.path) ?? [];
-    if (segments[0] === 'processos' && segments.length === 2) return null;
+    const standaloneSegments = ['processos', 'fases', 'phases', 'tarefas', 'tasks'];
+    if (standaloneSegments.includes(segments[0]) && segments.length === 2) return null;
     return { section: sectionForRoute(segments), scope: routeScope(segments) };
   }
   private async applyRoute() {
@@ -247,6 +248,17 @@ export class AppComponent implements OnInit, OnDestroy {
   reportClosedStates():ClosedWorkState[] { return closedWorkStates.includes(this.reportStatus as ClosedWorkState)?[this.reportStatus as ClosedWorkState]:[]; }
   async changeReportStatus(status:string) { this.reportStatus=status;await this.load(); }
   isProcessRoute() { return this.router.url.startsWith('/processos/'); }
+  isStandaloneRoute(): boolean {
+    const url = this.router.url;
+    return url.startsWith('/processos/') || url.startsWith('/fases/') || url.startsWith('/phases/') || url.startsWith('/tarefas/') || url.startsWith('/tasks/');
+  }
+  standaloneRouteTitle(): string {
+    const url = this.router.url;
+    if (url.startsWith('/processos/')) return 'Processo';
+    if (url.startsWith('/fases/') || url.startsWith('/phases/')) return 'Fase';
+    if (url.startsWith('/tarefas/') || url.startsWith('/tasks/')) return 'Tarefa';
+    return '';
+  }
   mark(rows: Item[] | undefined, kind:string):Item[] { return (rows ?? []).map(row=>({...row,kind})); }
   contextRows(data: Record<string,any>) { return ['organizations','departments','teams','projects','products','processes','tasks'].flatMap(key=>this.mark(data[key],({organizations:'organization',departments:'department',teams:'team',projects:'project',products:'product',processes:'process',tasks:'task'} as Record<string,string>)[key])); }
   fail(e:unknown) { this.error.set(e instanceof Error ? e.message : 'Não foi possível concluir a operação.'); }
@@ -313,6 +325,8 @@ export class AppComponent implements OnInit, OnDestroy {
     if(row.kind==='list'){await this.navigate('Listas',row);return;}
     if(row.kind==='template'){await this.prepareTemplate(row);return;}
     if(row.kind==='process'){await this.router.navigate(['/processos',row.id],{state:{fromTaskando:true}});return;}
+    if(row.kind==='phase'){await this.router.navigate(['/fases',row.id],{state:{fromTaskando:true}});return;}
+    if(row.kind==='task'){await this.router.navigate(['/tarefas',row.id],{state:{fromTaskando:true}});return;}
     try {
       await this.drawer.open(row, 'Detalhes', this.includeClosed());
     } catch(e) {

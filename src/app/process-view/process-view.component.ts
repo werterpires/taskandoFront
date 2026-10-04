@@ -89,11 +89,11 @@ export class ProcessViewComponent implements OnInit, OnDestroy {
   }
 
   async openPhase(phase: Item): Promise<void> {
-    await this.drawer.open(phase, 'Filhos');
+    await this.router.navigate(['/fases', phase.id]);
   }
 
   async openTask(task: Item): Promise<void> {
-    await this.drawer.open(task, 'Detalhes');
+    await this.router.navigate(['/tarefas', task.id]);
   }
 
   ngOnInit(): void {

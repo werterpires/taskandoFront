@@ -16,6 +16,7 @@ import {
 } from '@angular/core';
 import { ApiService } from '../../api.service';
 import { DrawerService } from '../drawer.service';
+import { Router } from '@angular/router';
 
 export type DependencyNodeType = 'task' | 'phase';
 export type DependencyState = 'independent' | 'blocked' | 'released';
@@ -207,16 +208,17 @@ export function layoutDependencyGraph(graph: DependencyGraph, containerType: 'pr
 export class DependencyGraphComponent implements AfterViewInit, OnChanges, OnDestroy {
   private readonly api = inject(ApiService);
   private readonly drawer = inject(DrawerService);
+  private readonly router = inject(Router);
   private readonly zone = inject(NgZone);
   private readonly instanceId = ++graphInstance;
   private resizeObserver?: ResizeObserver;
 
   openNode(node: DependencyNode): void {
-    const tab = node.type === 'phase' ? 'Filhos' : 'Detalhes';
-    void this.drawer.open(
-      { id: node.id, title: node.title, kind: node.type, status: node.status },
-      tab,
-    );
+    if (node.type === 'phase') {
+      void this.router.navigate(['/fases', node.id]);
+    } else {
+      void this.router.navigate(['/tarefas', node.id]);
+    }
   }
 
   @Input({ required: true }) graph: DependencyGraph = EMPTY_DEPENDENCY_GRAPH;

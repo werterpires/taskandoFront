@@ -233,6 +233,9 @@ button.process-item > div {
   min-width: 0;
 }
 .process-column-empty { padding: 18px; }
+.status-select-label select { padding: 7px 12px; border: 1px solid var(--line); border-radius: 8px; font-weight: 600; font-size: 13px; background: white; color: var(--text); cursor: pointer; }
+.task-page .page-heading .actions { display: flex; align-items: center; gap: 10px; }
+.task-page .page-heading .actions button.pinned { background: #fdf5e6; border-color: #f3d19c; color: #8c5d18; font-weight: 600; }
 .dependency-projection { margin-bottom: 16px; }
 .process-section-heading .eyebrow { margin-bottom: 4px !important; }
 .dependency-nodes { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; padding: 18px; }

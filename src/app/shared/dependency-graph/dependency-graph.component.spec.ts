@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { Router } from '@angular/router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ApiService } from '../../api.service';
 import {
@@ -44,7 +45,10 @@ function graph(tasks: DependencyNode[], phases: DependencyNode[] = [], edges: De
 async function createFixture(api: { request: ReturnType<typeof vi.fn> }, value: DependencyGraph, readOnly = false) {
   await TestBed.configureTestingModule({
     imports: [DependencyGraphComponent],
-    providers: [{ provide: ApiService, useValue: api }],
+    providers: [
+      { provide: ApiService, useValue: api },
+      { provide: Router, useValue: { navigate: vi.fn() } },
+    ],
   }).compileComponents();
   const fixture = TestBed.createComponent(DependencyGraphComponent);
   fixture.componentRef.setInput('graph', value);

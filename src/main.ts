@@ -2,7 +2,9 @@ import { bootstrapApplication } from '@angular/platform-browser';
 import { provideHttpClient } from '@angular/common/http';
 import { provideRouter, withHashLocation } from '@angular/router';
 import { AppComponent } from './app/app.component';
+import { PhaseViewComponent } from './app/phase-view/phase-view.component';
 import { ProcessViewComponent } from './app/process-view/process-view.component';
+import { TaskViewComponent } from './app/task-view/task-view.component';
 import { SectionRouteComponent } from './app/section-route.component';
 import { navigation } from './app/navigation';
 
@@ -17,6 +19,10 @@ bootstrapApplication(AppComponent, {
       { path: 'estrutura/departamento/:id', component: SectionRouteComponent },
       { path: 'estrutura/time/:id', component: SectionRouteComponent },
       { path: 'processos/:id', component: ProcessViewComponent },
+      { path: 'fases/:id', component: PhaseViewComponent },
+      { path: 'phases/:id', redirectTo: 'fases/:id' },
+      { path: 'tarefas/:id', component: TaskViewComponent },
+      { path: 'tasks/:id', redirectTo: 'tarefas/:id' },
       { path: '**', redirectTo: 'inicio' },
     ], withHashLocation()),
   ],

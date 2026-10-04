@@ -15,9 +15,9 @@
       <footer class="sidebar-footer"><span>{{user()!['displayName']}}</span><button (click)="logout()">Sair ↗</button></footer>
     </aside>
     <main class="main">
-      <header class="topbar"><div><button class="mobile-toggle" aria-label="Abrir menu" (click)="mobile.set(true)">☰</button><span>Meu espaço</span><span class="separator">/</span><strong>{{isProcessRoute()?'Processo':scope()?title(scope()!):section()}}</strong></div><div class="top-actions"><span class="today-label">{{month() | date:'MMMM yyyy'}}</span><button aria-label="Notificações" (click)="showNotifications.set(!showNotifications())">♧ <span>{{unreadNotificationCount()}}</span></button><span class="avatar small">{{user()!['displayName'].slice(0,1)}}</span></div></header>
+      <header class="topbar"><div><button class="mobile-toggle" aria-label="Abrir menu" (click)="mobile.set(true)">☰</button><span>Meu espaço</span><span class="separator">/</span><strong>{{isStandaloneRoute()?standaloneRouteTitle():scope()?title(scope()!):section()}}</strong></div><div class="top-actions"><span class="today-label">{{month() | date:'MMMM yyyy'}}</span><button aria-label="Notificações" (click)="showNotifications.set(!showNotifications())">♧ <span>{{unreadNotificationCount()}}</span></button><span class="avatar small">{{user()!['displayName'].slice(0,1)}}</span></div></header>
       <router-outlet></router-outlet>
-      @if(!isProcessRoute()) {
+      @if(!isStandaloneRoute()) {
       <div class="page">
         @if(error()){<div class="error" role="alert">{{error()}}<button aria-label="Fechar erro" (click)="error.set('')">×</button></div>}
         @if(notice()){<div class="notice" role="status">{{notice()}}<button aria-label="Fechar aviso" (click)="notice.set('')">×</button></div>}

@@ -86,7 +86,7 @@ describe('AppComponent drawer delegation', () => {
     return { api, router };
   }
 
-  it('delegates open(task) to DrawerService and populates drawer state', async () => {
+  it('intercepts task in open() and navigates to full page route', async () => {
     const { api, router } = createTestContext();
     await TestBed.configureTestingModule({
       imports: [AppComponent],
@@ -101,16 +101,9 @@ describe('AppComponent drawer delegation', () => {
     const task: Item = { id: 't-1', title: 'Task 1', kind: 'task' };
     await component.open(task);
 
-    expect(component.selected()).toEqual(task);
-    expect(drawer.openedItem()).toEqual(task);
-    expect(component.tab()).toBe('Detalhes');
-    expect(drawer.initialTab()).toBe('Detalhes');
-    expect(component.detail()['checklist']).toHaveLength(1);
-    expect(drawer.detail()['checklist']).toHaveLength(1);
-
-    component.selected.set(null);
-    expect(component.selected()).toBeNull();
+    expect(router.navigate).toHaveBeenCalledWith(['/tarefas', 't-1'], { state: { fromTaskando: true } });
     expect(drawer.openedItem()).toBeNull();
+    expect(component.selected()).toBeNull();
     fixture.destroy();
   });
 

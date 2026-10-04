@@ -85,25 +85,19 @@ describe('ProcessViewComponent', () => {
     fixture.destroy();
   });
 
-  it('opens phase card on Filhos tab and direct task on Detalhes tab in drawer', async () => {
+  it('navigates to phase route on phase click and task route on direct task click', async () => {
+    const router = { navigate: vi.fn() };
     const api = {
       request: vi.fn(async (path: string) => {
         if (path === 'processes/process-1') return { process: { id: 'process-1', title: 'Entrega', status: 'in_progress' } };
         if (path.startsWith('work-progress/')) return { percentage: 50, completed: 1, total: 2, excluded: 0, visible: 2 };
         if (path.startsWith('dependencies?')) return { tasks: [], phases: [], edges: [] };
         if (path.startsWith('item-roles?')) return { capabilities: ['edit'] };
-        if (path.startsWith('owner-transfers?')) return { transfers: [] };
-        if (path === 'tasks/task-1/checklist') return { checklist: [] };
-        if (path === 'tasks/task-1/comments') return { comments: [] };
-        if (path === 'tasks/task-1/audit') return { events: [] };
         throw new Error(`Unexpected request: ${path}`);
       }),
       requestWithClosed: vi.fn(async (path: string) => {
         if (path === 'processes/process-1/phases') return { phases: [{ id: 'phase-1', title: 'Fase 1', status: 'todo' }] };
         if (path === 'task-containers/process/process-1') return { tasks: [{ id: 'task-1', title: 'Tarefa 1', status: 'todo' }] };
-        if (path === 'processes/phase-1/phases') return { phases: [] };
-        if (path === 'task-containers/phase/phase-1') return { tasks: [] };
-        if (path === 'tasks/task-1/subtasks') return { subtasks: [] };
         throw new Error(`Unexpected requestWithClosed: ${path}`);
       }),
     };
@@ -112,12 +106,11 @@ describe('ProcessViewComponent', () => {
       providers: [
         { provide: ApiService, useValue: api },
         { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ id: 'process-1' })) } },
-        { provide: Router, useValue: { navigate: vi.fn() } },
+        { provide: Router, useValue: router },
       ],
     }).compileComponents();
 
     const fixture = TestBed.createComponent(ProcessViewComponent);
-    const drawer = TestBed.inject(DrawerService);
     fixture.detectChanges();
     await fixture.componentInstance.load();
     fixture.detectChanges();
@@ -127,20 +120,19 @@ describe('ProcessViewComponent', () => {
     phaseBtn?.click();
     await fixture.whenStable();
 
-    expect(drawer.openedItem()?.id).toBe('phase-1');
-    expect(drawer.initialTab()).toBe('Filhos');
+    expect(router.navigate).toHaveBeenCalledWith(['/fases', 'phase-1']);
 
     const taskBtn: HTMLButtonElement | null = fixture.nativeElement.querySelector('button.process-item[aria-label="Abrir tarefa Tarefa 1"]');
     expect(taskBtn).not.toBeNull();
     taskBtn?.click();
     await fixture.whenStable();
 
-    expect(drawer.openedItem()?.id).toBe('task-1');
-    expect(drawer.initialTab()).toBe('Detalhes');
+    expect(router.navigate).toHaveBeenCalledWith(['/tarefas', 'task-1']);
     fixture.destroy();
   });
 
-  it('opens graph node in drawer when clicking node heading in dependency graph', async () => {
+  it('navigates to item route when clicking node heading in dependency graph', async () => {
+    const router = { navigate: vi.fn() };
     const api = {
       request: vi.fn(async (path: string) => {
         if (path === 'processes/process-1') return { process: { id: 'process-1', title: 'Entrega', status: 'in_progress' } };
@@ -153,16 +145,11 @@ describe('ProcessViewComponent', () => {
           };
         }
         if (path.startsWith('item-roles?')) return { capabilities: ['edit'] };
-        if (path.startsWith('owner-transfers?')) return { transfers: [] };
-        if (path.startsWith('tasks/')) return { checklist: [], comments: [], audit: [] };
         throw new Error(`Unexpected request: ${path}`);
       }),
       requestWithClosed: vi.fn(async (path: string) => {
         if (path === 'processes/process-1/phases') return { phases: [{ id: 'phase-1', title: 'Fase 1', status: 'todo' }] };
         if (path === 'task-containers/process/process-1') return { tasks: [{ id: 'task-1', title: 'Tarefa 1', status: 'todo' }] };
-        if (path.startsWith('tasks/')) return { subtasks: [] };
-        if (path.startsWith('processes/')) return { phases: [] };
-        if (path.startsWith('task-containers/')) return { tasks: [] };
         throw new Error(`Unexpected requestWithClosed: ${path}`);
       }),
     };
@@ -171,12 +158,11 @@ describe('ProcessViewComponent', () => {
       providers: [
         { provide: ApiService, useValue: api },
         { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ id: 'process-1' })) } },
-        { provide: Router, useValue: { navigate: vi.fn() } },
+        { provide: Router, useValue: router },
       ],
     }).compileComponents();
 
     const fixture = TestBed.createComponent(ProcessViewComponent);
-    const drawer = TestBed.inject(DrawerService);
     fixture.detectChanges();
     await fixture.componentInstance.load();
     fixture.detectChanges();
@@ -186,8 +172,7 @@ describe('ProcessViewComponent', () => {
     nodeBtn?.click();
     await fixture.whenStable();
 
-    expect(drawer.openedItem()?.id).toBe('task-1');
-    expect(drawer.initialTab()).toBe('Detalhes');
+    expect(router.navigate).toHaveBeenCalledWith(['/tarefas', 'task-1']);
     fixture.destroy();
   });
 
