@@ -147,7 +147,11 @@ label { display: grid; gap: 6px; color: #5d6b61; font-size: 12px; font-weight: 7
 .drawer { position: fixed; inset: 0 0 0 auto; z-index: 41; width: min(630px, 94vw); overflow-y: auto; background: white; padding: 28px; box-shadow: -18px 0 45px #17241a33; }
 .drawer-header, .line { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .drawer-header button, .line > button { border: 0; background: transparent; font-size: 19px; }
-.task-parent-chain { margin: -2px 0 8px; color: #718075; font-size: 12px; line-height: 1.4; }
+.task-parent-chain, .entity-path { margin: -2px 0 10px; color: #718075; font-size: 13px; line-height: 1.4; display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+.entity-path .crumb-link { color: #526356; text-decoration: none; cursor: pointer; }
+.entity-path .crumb-link:hover { color: #1a251d; text-decoration: underline; }
+.entity-path .path-sep { color: #9ba89f; user-select: none; }
+.entity-path .crumb-current { color: #1a251d; font-weight: 500; }
 .detail-tabs { overflow-x: auto; border-bottom: 1px solid var(--line); margin: 15px -28px 22px; padding: 0 24px 8px; }
 .description { color: #5e6e61; line-height: 1.55; white-space: pre-wrap; }
 .detail-properties { display: grid; grid-template-columns: 120px 1fr; align-items: center; gap: 12px; border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin: 18px 0; }

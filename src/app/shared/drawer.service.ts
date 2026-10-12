@@ -31,20 +31,22 @@ export class DrawerService {
   ): Promise<void> {
     const current = this.openedItem();
     if (
-      item.kind === 'task' &&
-      item['parentTaskId'] &&
       current &&
-      current.id === item['parentTaskId'] &&
       !item['parentChain']?.length
     ) {
-      const currentTitle = current['title'] ?? current['name'] ?? '';
-      item = {
-        ...item,
-        parentChain: [
-          ...(current['parentChain'] ?? []),
-          { type: 'task', id: current.id, name: currentTitle },
-        ],
-      };
+      const isSubtask = item.kind === 'task' && item['parentTaskId'] === current.id;
+      const isChildPhase = item.kind === 'phase' && item['processId'] === current.id;
+      const isContainerChild = item['parentId'] === current.id;
+      if (isSubtask || isChildPhase || isContainerChild) {
+        const currentTitle = current['title'] ?? current['name'] ?? '';
+        item = {
+          ...item,
+          parentChain: [
+            ...(current['parentChain'] ?? []),
+            { type: current.kind, id: current.id, name: currentTitle },
+          ],
+        };
+      }
     }
     this.openedItem.set(item);
     this.initialTab.set(tab);

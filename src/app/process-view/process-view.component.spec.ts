@@ -214,4 +214,56 @@ describe('ProcessViewComponent', () => {
     expect(loadCount).toBeGreaterThan(prevCount);
     fixture.destroy();
   });
+
+  it('renders breadcrumbs path starting from pessoal and navigates on crumb click', async () => {
+    const api = {
+      request: vi.fn(async (path: string) => {
+        if (path === 'processes/process-1') {
+          return {
+            process: {
+              id: 'process-1',
+              title: 'Entrega',
+              status: 'in_progress',
+              parentChain: [
+                { type: 'organization', id: 'org-1', name: 'edubazu' },
+                { type: 'department', id: 'dept-1', name: 'Operações' },
+              ],
+            },
+          };
+        }
+        return apiResponse(path);
+      }),
+      requestWithClosed: vi.fn(async () => ({ phases: [], tasks: [] })),
+    };
+    const router = { navigate: vi.fn() };
+
+    await TestBed.configureTestingModule({
+      imports: [ProcessViewComponent],
+      providers: [
+        { provide: ApiService, useValue: api },
+        { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ id: 'process-1' })) } },
+        { provide: Router, useValue: router },
+      ],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(ProcessViewComponent);
+    fixture.detectChanges();
+    await fixture.componentInstance.load();
+    fixture.detectChanges();
+
+    const crumbs = fixture.componentInstance.breadcrumbs();
+    expect(crumbs.map(c => c.label)).toEqual(['pessoal', 'edubazu', 'Operações', 'Entrega']);
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const pathEl = compiled.querySelector('.page-heading .entity-path');
+    expect(pathEl).toBeTruthy();
+    expect(pathEl?.textContent).toContain('pessoal');
+    expect(pathEl?.textContent).toContain('edubazu');
+    expect(pathEl?.textContent).toContain('Operações');
+    expect(pathEl?.textContent).toContain('Entrega');
+
+    fixture.componentInstance.navigateCrumb(crumbs[1]);
+    expect(router.navigate).toHaveBeenCalledWith(['/estrutura', 'organizacao', 'org-1']);
+    fixture.destroy();
+  });
 });

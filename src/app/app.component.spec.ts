@@ -151,5 +151,77 @@ describe('AppComponent drawer delegation', () => {
     expect(component.selected()).toBeNull();
     fixture.destroy();
   });
+
+  it('renders breadcrumbs in drawer with root pessoal and navigates on crumb click', async () => {
+    const { api, router } = createTestContext();
+    await TestBed.configureTestingModule({
+      imports: [AppComponent],
+      providers: [{ provide: ApiService, useValue: api }, { provide: Router, useValue: router }],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(AppComponent);
+    const component = fixture.componentInstance;
+    const drawer = TestBed.inject(DrawerService);
+    await component.ngOnInit();
+
+    const item: Item = {
+      id: 't-1',
+      title: 'Minha Subtarefa',
+      kind: 'task',
+      parentChain: [
+        { type: 'organization', id: 'org-1', name: 'edubazu' },
+        { type: 'process', id: 'proc-1', name: 'Entrega' },
+      ],
+    };
+    await drawer.open(item);
+    fixture.detectChanges();
+
+    const crumbs = component.drawerBreadcrumbs();
+    expect(crumbs.map(c => c.label)).toEqual(['pessoal', 'edubazu', 'Entrega', 'Minha Subtarefa']);
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const pathEl = compiled.querySelector('.drawer .entity-path');
+    expect(pathEl).toBeTruthy();
+    expect(pathEl?.textContent).toContain('pessoal');
+    expect(pathEl?.textContent).toContain('edubazu');
+    expect(pathEl?.textContent).toContain('Minha Subtarefa');
+
+    // Clicking crumb navigates and closes drawer
+    component.navigateCrumb(crumbs[1]);
+    expect(component.selected()).toBeNull();
+    expect(router.navigate).toHaveBeenCalledWith(['/estrutura', 'organizacao', 'org-1']);
+    fixture.destroy();
+  });
+
+  it('renders scope breadcrumbs when scope is present', async () => {
+    const { api, router } = createTestContext();
+    await TestBed.configureTestingModule({
+      imports: [AppComponent],
+      providers: [{ provide: ApiService, useValue: api }, { provide: Router, useValue: router }],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(AppComponent);
+    const component = fixture.componentInstance;
+    await component.ngOnInit();
+
+    component.scope.set({
+      id: 'dept-1',
+      name: 'Engenharia',
+      kind: 'department',
+      parentChain: [{ type: 'organization', id: 'org-1', name: 'edubazu' }],
+    });
+    fixture.detectChanges();
+
+    const crumbs = component.scopeBreadcrumbs();
+    expect(crumbs.map(c => c.label)).toEqual(['pessoal', 'edubazu', 'Engenharia']);
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const pathEl = compiled.querySelector('.page-heading .entity-path');
+    expect(pathEl).toBeTruthy();
+    expect(pathEl?.textContent).toContain('pessoal');
+    expect(pathEl?.textContent).toContain('edubazu');
+    expect(pathEl?.textContent).toContain('Engenharia');
+    fixture.destroy();
+  });
 });
 

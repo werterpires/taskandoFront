@@ -138,4 +138,59 @@ describe('TaskViewComponent', () => {
 
     expect(fixture.componentInstance.state()).toBe('not-found');
   });
+
+  it('renders breadcrumbs path starting from pessoal and navigates on crumb click', async () => {
+    const api = {
+      request: vi.fn(async (path: string) => {
+        if (path === 'tasks/task-1') {
+          return {
+            task: {
+              id: 'task-1',
+              title: 'Criar tela',
+              status: 'todo',
+              parentType: 'phase',
+              parentId: 'phase-10',
+              parentChain: [
+                { type: 'organization', id: 'org-1', name: 'edubazu' },
+                { type: 'process', id: 'proc-1', name: 'Entrega' },
+                { type: 'phase', id: 'phase-10', name: 'Fase Beta' },
+              ],
+            },
+          };
+        }
+        return taskApiResponse(path);
+      }),
+      requestWithClosed: vi.fn(async () => ({ subtasks: [] })),
+    };
+    const router = { navigate: vi.fn() };
+
+    await TestBed.configureTestingModule({
+      imports: [TaskViewComponent],
+      providers: [
+        { provide: ApiService, useValue: api },
+        { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ id: 'task-1' })) } },
+        { provide: Router, useValue: router },
+      ],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(TaskViewComponent);
+    fixture.detectChanges();
+    await fixture.componentInstance.load();
+    fixture.detectChanges();
+
+    const crumbs = fixture.componentInstance.breadcrumbs();
+    expect(crumbs.map(c => c.label)).toEqual(['pessoal', 'edubazu', 'Entrega', 'Fase Beta', 'Criar tela']);
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const pathEl = compiled.querySelector('.page-heading .entity-path');
+    expect(pathEl).toBeTruthy();
+    expect(pathEl?.textContent).toContain('pessoal');
+    expect(pathEl?.textContent).toContain('edubazu');
+    expect(pathEl?.textContent).toContain('Entrega');
+    expect(pathEl?.textContent).toContain('Fase Beta');
+    expect(pathEl?.textContent).toContain('Criar tela');
+
+    fixture.componentInstance.navigateCrumb(crumbs[2]);
+    expect(router.navigate).toHaveBeenCalledWith(['/processos', 'proc-1']);
+  });
 });

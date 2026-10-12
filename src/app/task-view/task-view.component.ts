@@ -1,10 +1,11 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { ApiError, ApiService, Item } from '../api.service';
 import { DrawerService } from '../shared/drawer.service';
+import { BreadcrumbCrumb, entityBreadcrumbs } from '../shared/breadcrumb';
 
 type LoadState = 'loading' | 'ready' | 'forbidden' | 'not-found' | 'temporary-error';
 
@@ -78,6 +79,9 @@ export class TaskViewComponent implements OnInit, OnDestroy {
   audit = signal<AuditEvent[]>([]);
   activeTab = signal<'checklist' | 'subtasks' | 'comments' | 'audit'>('checklist');
   saving = signal(false);
+
+  breadcrumbs = computed(() => entityBreadcrumbs(this.task()));
+  navigateCrumb(crumb: BreadcrumbCrumb) { if (crumb.route) void this.router.navigate(crumb.route); }
 
   newCommentText = '';
   newChecklistText = '';

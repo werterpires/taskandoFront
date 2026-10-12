@@ -10,6 +10,7 @@ import { environment } from '../environments/environment';
 import { DependencyGraph, DependencyGraphComponent, EMPTY_DEPENDENCY_GRAPH } from './shared/dependency-graph/dependency-graph.component';
 
 import { DrawerService } from './shared/drawer.service';
+import { BreadcrumbCrumb, entityBreadcrumbs } from './shared/breadcrumb';
 
 const paths: Record<string, string> = { task: 'tasks', project: 'projects', front: 'fronts', product: 'products', process: 'processes', phase: 'phases', organization: 'organizations', list: 'lists', reminder: 'reminders', series: 'recurrence-series' };
 @Component({ selector: 'app-root', standalone: true, imports: [CommonModule, FormsModule, RouterOutlet, DependencyGraphComponent], templateUrl: './app.component.html' })
@@ -38,6 +39,14 @@ export class AppComponent implements OnInit, OnDestroy {
   children = this.drawer.children;
   detail = this.drawer.detail;
   tab = this.drawer.initialTab;
+  scopeBreadcrumbs = computed(() => entityBreadcrumbs(this.scope()));
+  drawerBreadcrumbs = computed(() => entityBreadcrumbs(this.selected()));
+  navigateCrumb(crumb: BreadcrumbCrumb) {
+    if (crumb.route) {
+      this.selected.set(null);
+      void this.router.navigate(crumb.route);
+    }
+  }
   showNotifications = signal(false);
   search = signal(''); view = signal('list'); temporal = signal('all');
   includeClosed = signal<ClosedWorkState[]>([]);

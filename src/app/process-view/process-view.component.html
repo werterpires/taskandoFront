@@ -26,6 +26,18 @@
       <div>
         <p class="eyebrow">PROCESSO</p>
         <h1>{{item.title}}</h1>
+        <p class="entity-path" aria-label="Caminho do item">
+          @for (crumb of breadcrumbs(); track $index; let last = $last) {
+            @if (crumb.route && !last) {
+              <a (click)="navigateCrumb(crumb)" class="crumb-link">{{crumb.label}}</a>
+            } @else {
+              <span [class.crumb-current]="last">{{crumb.label}}</span>
+            }
+            @if (!last) {
+              <span class="path-sep">→</span>
+            }
+          }
+        </p>
         <p>{{item['description'] || 'Sem descrição.'}}</p>
       </div>
       <span class="badge" [attr.data-status]="item['status']">{{statusLabels[item['status']] || item['status']}}</span>

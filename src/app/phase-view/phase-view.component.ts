@@ -6,6 +6,7 @@ import { Subscription } from 'rxjs';
 import { ApiError, ApiService, ClosedWorkState, Item, closedWorkStates } from '../api.service';
 import { DependencyGraph, DependencyGraphComponent } from '../shared/dependency-graph/dependency-graph.component';
 import { DrawerService } from '../shared/drawer.service';
+import { BreadcrumbCrumb, entityBreadcrumbs } from '../shared/breadcrumb';
 
 type LoadState = 'loading' | 'ready' | 'forbidden' | 'not-found' | 'temporary-error';
 type Progress = { percentage: number; completed: number; total: number; excluded: number; visible: number };
@@ -50,6 +51,9 @@ export class PhaseViewComponent implements OnInit, OnDestroy {
   includeClosed = signal<ClosedWorkState[]>([]);
   search = signal('');
   temporal = signal('all');
+
+  breadcrumbs = computed(() => entityBreadcrumbs(this.phase()));
+  navigateCrumb(crumb: BreadcrumbCrumb) { if (crumb.route) void this.router.navigate(crumb.route); }
 
   visibleTasks = computed(() => {
     const query = this.search().trim().toLocaleLowerCase();
