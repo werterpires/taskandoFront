@@ -6,6 +6,7 @@ import { Subscription } from 'rxjs';
 import { ApiError, ApiService, Item } from '../api.service';
 import { DrawerService } from '../shared/drawer.service';
 import { BreadcrumbCrumb, entityBreadcrumbs } from '../shared/breadcrumb';
+import { DateBrPipe } from '../shared/date-br.pipe';
 
 type LoadState = 'loading' | 'ready' | 'forbidden' | 'not-found' | 'temporary-error';
 
@@ -33,7 +34,7 @@ export interface AuditEvent {
 @Component({
   selector: 'app-task-view',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, DateBrPipe],
   templateUrl: './task-view.component.html',
 })
 export class TaskViewComponent implements OnInit, OnDestroy {

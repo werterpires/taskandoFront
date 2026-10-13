@@ -11,9 +11,10 @@ import { DependencyGraph, DependencyGraphComponent, EMPTY_DEPENDENCY_GRAPH } fro
 
 import { DrawerService } from './shared/drawer.service';
 import { BreadcrumbCrumb, entityBreadcrumbs } from './shared/breadcrumb';
+import { DateBrPipe } from './shared/date-br.pipe';
 
 const paths: Record<string, string> = { task: 'tasks', project: 'projects', front: 'fronts', product: 'products', process: 'processes', phase: 'phases', organization: 'organizations', list: 'lists', reminder: 'reminders', series: 'recurrence-series' };
-@Component({ selector: 'app-root', standalone: true, imports: [CommonModule, FormsModule, RouterOutlet, DependencyGraphComponent], templateUrl: './app.component.html' })
+@Component({ selector: 'app-root', standalone: true, imports: [CommonModule, FormsModule, RouterOutlet, DependencyGraphComponent, DateBrPipe], templateUrl: './app.component.html' })
 export class AppComponent implements OnInit, OnDestroy {
   api = inject(ApiService);
   router = inject(Router);

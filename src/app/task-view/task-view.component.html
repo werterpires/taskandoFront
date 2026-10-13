@@ -66,7 +66,7 @@
       </article>
       <article>
         <span>Prazo</span>
-        <strong>{{item['dueDate'] || 'Sem prazo'}}</strong>
+        <strong>{{(item['dueDate'] | dateBr) || 'Sem prazo'}}</strong>
         <small>{{item['pinnedForToday'] ? 'Fixada para hoje' : 'Prazo programado'}}</small>
       </article>
       <article>
@@ -123,7 +123,7 @@
           </form>
           @for (sub of subtasks(); track sub.id) {
             <button type="button" class="process-item" (click)="openSubtask(sub)">
-              <div><strong>{{sub.title}}</strong><p>{{sub['dueDate'] || 'Sem prazo'}}</p></div>
+              <div><strong>{{sub.title}}</strong><p>{{(sub['dueDate'] | dateBr) || 'Sem prazo'}}</p></div>
               <span class="badge" [attr.data-status]="sub['status']">{{statusLabels[sub['status']] || sub['status']}}</span>
             </button>
           }
@@ -144,7 +144,7 @@
           @for (comm of comments(); track comm.id) {
             <div class="comment">
               <p>{{comm.body}}</p>
-              <small class="muted">{{comm.authorName || 'Usuário'}} · {{comm.createdAt | date:'dd/MM/yyyy HH:mm'}}</small>
+              <small class="muted">{{comm.authorName || 'Usuário'}} · {{comm.createdAt | dateBr:'datetime'}}</small>
             </div>
           }
           @if (!comments().length) {
@@ -158,7 +158,7 @@
           @for (event of audit(); track event.id) {
             <div class="comment">
               <p><strong>{{event.actorName || 'Usuário'}}</strong> {{event.summary}}</p>
-              <small class="muted">{{event.createdAt | date:'dd/MM/yyyy HH:mm'}}</small>
+              <small class="muted">{{event.createdAt | dateBr:'datetime'}}</small>
             </div>
           }
           @if (!audit().length) {

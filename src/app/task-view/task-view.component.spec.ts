@@ -52,6 +52,9 @@ describe('TaskViewComponent', () => {
     fixture.detectChanges();
     await fixture.componentInstance.load();
 
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain('05/10/2026');
     expect(fixture.componentInstance.state()).toBe('ready');
     expect(fixture.componentInstance.task()?.title).toBe('Criar tela');
     expect(fixture.componentInstance.checklist().length).toBe(1);
