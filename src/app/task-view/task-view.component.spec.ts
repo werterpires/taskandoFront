@@ -20,7 +20,7 @@ function taskApiResponse(path: string) {
     };
   }
   if (path === 'tasks/task-1/checklist') {
-    return { checklist: [{ id: 'chk-1', text: 'Item 1', completed: false }] };
+    return { items: [{ id: 'chk-1', title: 'Item 1', completed: false }] };
   }
   if (path === 'tasks/task-1/comments') {
     return { comments: [{ id: 'c-1', body: 'Comentário', authorName: 'Tester', createdAt: '2026-10-04T10:00:00Z' }] };
@@ -193,4 +193,60 @@ describe('TaskViewComponent', () => {
     fixture.componentInstance.navigateCrumb(crumbs[2]);
     expect(router.navigate).toHaveBeenCalledWith(['/processos', 'proc-1']);
   });
+
+  it('adds and toggles checklist item with correct title payload', async () => {
+    const postPayloads: any[] = [];
+    const patchPayloads: any[] = [];
+    const api = {
+      request: vi.fn(async (path: string, method?: string, body?: any) => {
+        if (method === 'POST' && path === 'tasks/task-1/checklist') {
+          postPayloads.push(body);
+          return { item: { id: 'chk-2', title: body.title, completed: false } };
+        }
+        if (method === 'PATCH' && path === 'tasks/task-1/checklist/chk-1') {
+          patchPayloads.push(body);
+          return { item: { id: 'chk-1', title: 'Item 1', completed: body.completed } };
+        }
+        if (path === 'tasks/task-1/checklist') {
+          return {
+            items: [
+              { id: 'chk-1', title: 'Item 1', completed: false },
+              ...(postPayloads.length ? [{ id: 'chk-2', title: postPayloads[0].title, completed: false }] : []),
+            ],
+          };
+        }
+        return taskApiResponse(path);
+      }),
+      requestWithClosed: vi.fn(async () => ({ subtasks: [] })),
+    };
+    const drawer = { notifyMutation: vi.fn() };
+
+    await TestBed.configureTestingModule({
+      imports: [TaskViewComponent],
+      providers: [
+        { provide: ApiService, useValue: api },
+        { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ id: 'task-1' })) } },
+        { provide: Router, useValue: { navigate: vi.fn() } },
+        { provide: DrawerService, useValue: drawer },
+      ],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(TaskViewComponent);
+    fixture.detectChanges();
+    await fixture.componentInstance.load();
+
+    expect(fixture.componentInstance.checklist().length).toBe(1);
+
+    fixture.componentInstance.newChecklistText = 'Cobrar Bianca';
+    await fixture.componentInstance.addChecklistItem();
+
+    expect(postPayloads).toEqual([{ title: 'Cobrar Bianca' }]);
+    expect(fixture.componentInstance.checklist().length).toBe(2);
+    expect(fixture.componentInstance.checklist()[1].title).toBe('Cobrar Bianca');
+
+    await fixture.componentInstance.toggleChecklistItem(fixture.componentInstance.checklist()[0]);
+    expect(patchPayloads).toEqual([{ completed: true }]);
+    expect(fixture.componentInstance.checklist()[0].completed).toBe(true);
+  });
 });
+

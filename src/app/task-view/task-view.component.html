@@ -104,7 +104,7 @@
             <div class="check-row">
               <label class="check-label">
                 <input type="checkbox" [checked]="check.completed" (change)="toggleChecklistItem(check)">
-                <span [style.text-decoration]="check.completed ? 'line-through' : 'none'">{{check.text}}</span>
+                <span [style.text-decoration]="check.completed ? 'line-through' : 'none'">{{check.title}}</span>
               </label>
               <button aria-label="Excluir item" (click)="deleteChecklistItem(check)">×</button>
             </div>

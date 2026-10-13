@@ -11,8 +11,9 @@ type LoadState = 'loading' | 'ready' | 'forbidden' | 'not-found' | 'temporary-er
 
 export interface ChecklistItem {
   id: string;
-  text: string;
+  title: string;
   completed: boolean;
+  position?: number;
 }
 
 export interface TaskComment {
@@ -112,7 +113,7 @@ export class TaskViewComponent implements OnInit, OnDestroy {
     try {
       const [taskData, checklistData, subtasksData, commentsData, auditData] = await Promise.all([
         this.api.request(`tasks/${this.taskId}`),
-        this.api.request(`tasks/${this.taskId}/checklist`).catch(() => ({ checklist: [] })),
+        this.api.request(`tasks/${this.taskId}/checklist`).catch(() => ({ items: [] })),
         this.api.requestWithClosed(`tasks/${this.taskId}/subtasks`, ['completed', 'cancelled', 'archived']).catch(() => ({ subtasks: [] })),
         this.api.request(`tasks/${this.taskId}/comments`).catch(() => ({ comments: [] })),
         this.api.request(`tasks/${this.taskId}/audit`).catch(() => ({ events: [] })),
@@ -122,7 +123,7 @@ export class TaskViewComponent implements OnInit, OnDestroy {
 
       const task = taskData.task ?? taskData;
       this.task.set(task);
-      this.checklist.set(checklistData.checklist ?? []);
+      this.checklist.set(checklistData.items ?? checklistData.checklist ?? []);
       this.subtasks.set(subtasksData.subtasks ?? []);
       this.comments.set(commentsData.comments ?? []);
       this.audit.set(auditData.events ?? auditData.audit ?? []);
@@ -179,14 +180,14 @@ export class TaskViewComponent implements OnInit, OnDestroy {
   }
 
   async addChecklistItem(): Promise<void> {
-    const text = this.newChecklistText.trim();
-    if (!text || this.saving()) return;
+    const title = this.newChecklistText.trim();
+    if (!title || this.saving()) return;
     this.saving.set(true);
     try {
-      await this.api.request(`tasks/${this.taskId}/checklist`, 'POST', { text });
+      await this.api.request(`tasks/${this.taskId}/checklist`, 'POST', { title });
       this.newChecklistText = '';
       const refreshed = await this.api.request(`tasks/${this.taskId}/checklist`);
-      this.checklist.set(refreshed.checklist ?? []);
+      this.checklist.set(refreshed.items ?? refreshed.checklist ?? []);
       this.drawer.notifyMutation(this.task() ?? undefined, 'checklist');
     } catch (error) {
       this.errorMessage.set(error instanceof Error ? error.message : 'Falha ao adicionar item.');
