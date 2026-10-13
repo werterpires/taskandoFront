@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { NavigationEnd, Router } from '@angular/router';
-import { Subject } from 'rxjs';
+import { Subject, of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 import { ApiService, Item } from './api.service';
 import { AppComponent } from './app.component';
@@ -45,6 +45,38 @@ describe('AppComponent routing', () => {
     expect(api.requestWithClosed).toHaveBeenCalledTimes(1);
     expect(api.requestWithClosed).toHaveBeenCalledWith('tasks', []);
     expect(fixture.componentInstance.section()).toBe('Minhas tarefas');
+    fixture.destroy();
+  });
+
+  it('renders month label in Brazilian format in topbar', async () => {
+    const api = {
+      request: vi.fn(async (path: string) => {
+        if (path === 'auth/me') return { user: { id: 'u-1', displayName: 'Werter', email: 'w@test.com' } };
+        if (path === 'navigation') return { roots: [] };
+        if (path === 'notifications?unreadOnly=1') return { count: 0 };
+        throw new Error(`Unexpected request: ${path}`);
+      }),
+      requestWithClosed: vi.fn(async () => ({ tasks: [] })),
+    };
+    const router = {
+      events: of(new NavigationEnd(1, '/minhas-tarefas', '/minhas-tarefas')),
+      url: '/minhas-tarefas',
+      parseUrl: vi.fn(() => ({ root: { children: { primary: { segments: [{ path: 'minhas-tarefas' }] } } } })),
+      navigate: vi.fn(),
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [AppComponent],
+      providers: [{ provide: ApiService, useValue: api }, { provide: Router, useValue: router }],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.componentInstance.month.set(new Date(2026, 9, 1));
+    await fixture.componentInstance.ngOnInit();
+    fixture.detectChanges();
+
+    const topbarLabel = (fixture.nativeElement as HTMLElement).querySelector('.today-label');
+    expect(topbarLabel?.textContent).toContain('Outubro de 2026');
     fixture.destroy();
   });
 });

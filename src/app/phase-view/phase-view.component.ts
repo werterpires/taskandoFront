@@ -7,6 +7,7 @@ import { ApiError, ApiService, ClosedWorkState, Item, closedWorkStates } from '.
 import { DependencyGraph, DependencyGraphComponent } from '../shared/dependency-graph/dependency-graph.component';
 import { DrawerService } from '../shared/drawer.service';
 import { BreadcrumbCrumb, entityBreadcrumbs } from '../shared/breadcrumb';
+import { DateBrPipe } from '../shared/date-br.pipe';
 
 type LoadState = 'loading' | 'ready' | 'forbidden' | 'not-found' | 'temporary-error';
 type Progress = { percentage: number; completed: number; total: number; excluded: number; visible: number };
@@ -14,7 +15,7 @@ type Progress = { percentage: number; completed: number; total: number; excluded
 @Component({
   selector: 'app-phase-view',
   standalone: true,
-  imports: [CommonModule, FormsModule, DependencyGraphComponent],
+  imports: [CommonModule, FormsModule, DependencyGraphComponent, DateBrPipe],
   templateUrl: './phase-view.component.html',
 })
 export class PhaseViewComponent implements OnInit, OnDestroy {

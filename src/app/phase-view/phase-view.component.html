@@ -75,7 +75,7 @@
         <div class="item-list">
           @for (task of visibleTasks(); track task.id) {
             <button type="button" class="process-item" [attr.aria-label]="'Abrir tarefa ' + task.title" (click)="openTask(task)">
-              <div><strong>{{task.title}}</strong><p>{{task['description'] || task['dueDate'] || 'Sem descrição ou prazo.'}}</p></div>
+              <div><strong>{{task.title}}</strong><p>{{task['description'] || (task['dueDate'] | dateBr) || 'Sem descrição ou prazo.'}}</p></div>
               <span class="badge" [attr.data-status]="task['status']">{{statusLabels[task['status']] || task['status']}}</span>
             </button>
           }
