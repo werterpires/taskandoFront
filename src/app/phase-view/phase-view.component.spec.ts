@@ -166,4 +166,96 @@ describe('PhaseViewComponent', () => {
     fixture.componentInstance.navigateCrumb(crumbs[2]);
     expect(router.navigate).toHaveBeenCalledWith(['/processos', 'process-9']);
   });
+
+  it('renders approve/reject buttons and submits approval decision', async () => {
+    let currentStatus = 'awaiting_approval';
+    const api = {
+      request: vi.fn(async (path: string, method?: string, body?: any) => {
+        if (path === 'approvals' && method === 'POST') {
+          currentStatus = body.decision === 'approve' ? 'completed' : 'in_progress';
+          return { subjectType: 'phase', item: { id: 'phase-1', status: currentStatus } };
+        }
+        if (path === 'phases/phase-1') {
+          return { phase: { id: 'phase-1', title: 'Fase Beta', status: currentStatus, processId: 'process-9' } };
+        }
+        return phaseApiResponse(path);
+      }),
+      requestWithClosed: vi.fn(async () => ({ tasks: [] })),
+    };
+    const router = { navigate: vi.fn() };
+
+    await TestBed.configureTestingModule({
+      imports: [PhaseViewComponent],
+      providers: [
+        { provide: ApiService, useValue: api },
+        { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ id: 'phase-1' })) } },
+        { provide: Router, useValue: router },
+      ],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(PhaseViewComponent);
+    fixture.detectChanges();
+    await fixture.componentInstance.load();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const approveBtn = compiled.querySelector('.page-heading .actions button.primary') as HTMLButtonElement;
+    expect(approveBtn).toBeTruthy();
+    expect(approveBtn.textContent).toContain('Aprovar');
+
+    await fixture.componentInstance.approve('approve');
+    expect(api.request).toHaveBeenCalledWith('approvals', 'POST', {
+      subjectType: 'phase',
+      subjectId: 'phase-1',
+      decision: 'approve',
+    });
+    expect(fixture.componentInstance.phase()?.status).toBe('completed');
+  });
+
+  it('opens reject modal and confirms rejection with reason', async () => {
+    const api = {
+      request: vi.fn(async (path: string, method?: string, body?: any) => {
+        if (path === 'approvals' && method === 'POST') {
+          return { subjectType: 'phase', item: { id: 'phase-1', status: 'in_progress' } };
+        }
+        if (path === 'phases/phase-1') {
+          return { phase: { id: 'phase-1', title: 'Fase Beta', status: 'awaiting_approval', processId: 'process-9' } };
+        }
+        return phaseApiResponse(path);
+      }),
+      requestWithClosed: vi.fn(async () => ({ tasks: [] })),
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [PhaseViewComponent],
+      providers: [
+        { provide: ApiService, useValue: api },
+        { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ id: 'phase-1' })) } },
+        { provide: Router, useValue: { navigate: vi.fn() } },
+      ],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(PhaseViewComponent);
+    fixture.detectChanges();
+    await fixture.componentInstance.load();
+    fixture.detectChanges();
+
+    fixture.componentInstance.promptReject();
+    expect(fixture.componentInstance.rejectModalOpen()).toBe(true);
+
+    fixture.componentInstance.confirmReject();
+    expect(fixture.componentInstance.actionError()).toContain('Informe o motivo');
+
+    fixture.componentInstance.rejectReason.set('Necessário ajustar cobertura.');
+    fixture.componentInstance.confirmReject();
+    await Promise.resolve();
+
+    expect(api.request).toHaveBeenCalledWith('approvals', 'POST', {
+      subjectType: 'phase',
+      subjectId: 'phase-1',
+      decision: 'reject',
+      reason: 'Necessário ajustar cobertura.',
+    });
+    expect(fixture.componentInstance.rejectModalOpen()).toBe(false);
+  });
 });

@@ -251,5 +251,50 @@ describe('TaskViewComponent', () => {
     expect(patchPayloads).toEqual([{ completed: true }]);
     expect(fixture.componentInstance.checklist()[0].completed).toBe(true);
   });
+
+  it('renders approve/reject buttons and submits approval decision on task', async () => {
+    let currentStatus = 'awaiting_approval';
+    const api = {
+      request: vi.fn(async (path: string, method?: string, body?: any) => {
+        if (path === 'approvals' && method === 'POST') {
+          currentStatus = body.decision === 'approve' ? 'completed' : 'in_progress';
+          return { subjectType: 'task', item: { id: 'task-1', status: currentStatus } };
+        }
+        if (path === 'tasks/task-1') {
+          return { task: { id: 'task-1', title: 'Criar tela', status: currentStatus, parentType: 'phase', parentId: 'phase-9' } };
+        }
+        return taskApiResponse(path);
+      }),
+      requestWithClosed: vi.fn(async () => ({ subtasks: [] })),
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [TaskViewComponent],
+      providers: [
+        { provide: ApiService, useValue: api },
+        { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ id: 'task-1' })) } },
+        { provide: Router, useValue: { navigate: vi.fn() } },
+        { provide: DrawerService, useValue: { notifyMutation: vi.fn(), refreshNotification: () => 0 } },
+      ],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(TaskViewComponent);
+    fixture.detectChanges();
+    await fixture.componentInstance.load();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const approveBtn = compiled.querySelector('.page-heading .actions button.primary') as HTMLButtonElement;
+    expect(approveBtn).toBeTruthy();
+    expect(approveBtn.textContent).toContain('Aprovar');
+
+    await fixture.componentInstance.approve('approve');
+    expect(api.request).toHaveBeenCalledWith('approvals', 'POST', {
+      subjectType: 'task',
+      subjectId: 'task-1',
+      decision: 'approve',
+    });
+    expect(fixture.componentInstance.task()?.status).toBe('completed');
+  });
 });
 

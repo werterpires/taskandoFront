@@ -40,8 +40,18 @@
         </p>
         <p>{{item['description'] || 'Sem descrição.'}}</p>
       </div>
-      <span class="badge" [attr.data-status]="item['status']">{{statusLabels[item['status']] || item['status']}}</span>
+      <div class="actions">
+        <span class="badge" [attr.data-status]="item['status']">{{statusLabels[item['status']] || item['status']}}</span>
+        @if (item['status'] === 'awaiting_approval' && !readOnly()) {
+          <button type="button" class="primary" [disabled]="saving()" (click)="approve('approve')">Aprovar</button>
+          <button type="button" [disabled]="saving()" (click)="promptReject()">Devolver para execução</button>
+        }
+      </div>
     </section>
+
+    @if (actionError()) {
+      <div class="error" role="alert">{{actionError()}}<button aria-label="Fechar erro" (click)="actionError.set('')">×</button></div>
+    }
 
     @if (readOnly()) {
       <div class="notice process-readonly" role="status"><span><strong>Somente leitura.</strong> Seu acesso permite consultar este processo, sem alterar sua estrutura.</span></div>
@@ -111,5 +121,26 @@
         (graphChange)="graph.set($event)"
       />
     </section>
+
+    @if (rejectModalOpen()) {
+      <div class="modal-backdrop" (click)="closeRejectModal()"></div>
+      <section class="modal" role="dialog" aria-modal="true" aria-label="Devolver para execução">
+        <h2>Devolver para execução</h2>
+        <p>Informe o motivo da devolução para que os ajustes sejam realizados.</p>
+        <form (ngSubmit)="confirmReject()">
+          <label>
+            Motivo
+            <textarea [ngModel]="rejectReason()" (ngModelChange)="rejectReason.set($event)" name="reason" rows="3" required maxlength="1000" placeholder="Descreva o que precisa ser ajustado…"></textarea>
+          </label>
+          @if (actionError()) {
+            <p class="error" role="alert">{{actionError()}}</p>
+          }
+          <div class="actions">
+            <button type="button" [disabled]="saving()" (click)="closeRejectModal()">Cancelar</button>
+            <button type="submit" class="primary" [disabled]="saving() || !rejectReason().trim()">Confirmar devolução</button>
+          </div>
+        </form>
+      </section>
+    }
   }
 </div>

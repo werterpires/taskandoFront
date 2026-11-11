@@ -266,4 +266,51 @@ describe('ProcessViewComponent', () => {
     expect(router.navigate).toHaveBeenCalledWith(['/estrutura', 'organizacao', 'org-1']);
     fixture.destroy();
   });
+
+  it('renders approve/reject buttons and submits approval decision on process', async () => {
+    let currentStatus = 'awaiting_approval';
+    const api = {
+      request: vi.fn(async (path: string, method?: string, body?: any) => {
+        if (path === 'approvals' && method === 'POST') {
+          currentStatus = body.decision === 'approve' ? 'completed' : 'in_progress';
+          return { subjectType: 'process', item: { id: 'process-1', status: currentStatus } };
+        }
+        if (path === 'processes/process-1') {
+          return { process: { id: 'process-1', title: 'Entrega', status: currentStatus } };
+        }
+        if (path.startsWith('work-progress/')) return { percentage: 100, completed: 2, total: 2, excluded: 0, visible: 2 };
+        if (path.startsWith('dependencies?')) return { tasks: [], phases: [], edges: [] };
+        if (path.startsWith('item-roles?')) return { capabilities: ['edit'] };
+        throw new Error(`Unexpected request: ${path}`);
+      }),
+      requestWithClosed: vi.fn(async () => ({ phases: [], tasks: [] })),
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [ProcessViewComponent],
+      providers: [
+        { provide: ApiService, useValue: api },
+        { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ id: 'process-1' })) } },
+        { provide: Router, useValue: { navigate: vi.fn() } },
+      ],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(ProcessViewComponent);
+    fixture.detectChanges();
+    await fixture.componentInstance.load();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const approveBtn = compiled.querySelector('.page-heading .actions button.primary') as HTMLButtonElement;
+    expect(approveBtn).toBeTruthy();
+    expect(approveBtn.textContent).toContain('Aprovar');
+
+    await fixture.componentInstance.approve('approve');
+    expect(api.request).toHaveBeenCalledWith('approvals', 'POST', {
+      subjectType: 'process',
+      subjectId: 'process-1',
+      decision: 'approve',
+    });
+    expect(fixture.componentInstance.process()?.status).toBe('completed');
+  });
 });

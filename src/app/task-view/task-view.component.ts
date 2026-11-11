@@ -81,6 +81,8 @@ export class TaskViewComponent implements OnInit, OnDestroy {
   audit = signal<AuditEvent[]>([]);
   activeTab = signal<'checklist' | 'subtasks' | 'comments' | 'audit'>('checklist');
   saving = signal(false);
+  rejectModalOpen = signal(false);
+  rejectReason = signal('');
 
   breadcrumbs = computed(() => entityBreadcrumbs(this.task()));
   navigateCrumb(crumb: BreadcrumbCrumb) { if (crumb.route) void this.router.navigate(crumb.route); }
@@ -161,6 +163,54 @@ export class TaskViewComponent implements OnInit, OnDestroy {
     } finally {
       this.saving.set(false);
     }
+  }
+
+  async approve(decision: 'approve' | 'reject', reason?: string): Promise<void> {
+    if (!this.taskId || this.saving()) return;
+    this.saving.set(true);
+    this.errorMessage.set('');
+    try {
+      const payload: { subjectType: string; subjectId: string; decision: string; reason?: string } = {
+        subjectType: 'task',
+        subjectId: this.taskId,
+        decision,
+      };
+      if (decision === 'reject') {
+        payload.reason = reason?.trim();
+      }
+      await this.api.request('approvals', 'POST', payload);
+      this.rejectModalOpen.set(false);
+      this.rejectReason.set('');
+      if (this.task()) {
+        this.drawer.notifyMutation(this.task()!, 'approve');
+      }
+      await this.load();
+    } catch (error) {
+      this.errorMessage.set(error instanceof Error ? error.message : 'Falha ao processar aprovação.');
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
+  promptReject(): void {
+    this.errorMessage.set('');
+    this.rejectReason.set('');
+    this.rejectModalOpen.set(true);
+  }
+
+  closeRejectModal(): void {
+    if (this.saving()) return;
+    this.rejectModalOpen.set(false);
+    this.rejectReason.set('');
+  }
+
+  confirmReject(): void {
+    const reason = this.rejectReason().trim();
+    if (!reason) {
+      this.errorMessage.set('Informe o motivo da devolução.');
+      return;
+    }
+    void this.approve('reject', reason);
   }
 
   async togglePin(): Promise<void> {

@@ -391,7 +391,16 @@ export class AppComponent implements OnInit, OnDestroy {
     await this.run(async()=>{await this.api.request(row.kind==='reminder'?'reminders':`${paths[row.kind!]}/${row.id}`,'DELETE',row.kind==='reminder'?{id:row.id}:{});this.selected.set(null);await this.reloadNavigation();await this.load();this.drawer.notifyMutation(row,'delete');});
   }
   async restore(row:Item) {await this.run(async()=>{await this.api.request('recycle-bin/tasks','POST',{id:row.id});await this.reloadNavigation();await this.load();});}
-  async approve(decision:string) {const row=this.selected()!;await this.run(async()=>{await this.api.request('approvals','POST',{subjectType:row.kind,subjectId:row.id,decision});this.selected.set(null);await this.load();this.drawer.notifyMutation(row,'approve');});}
+  async approve(decision:string) {
+    const row=this.selected()!;
+    let reason: string | undefined;
+    if (decision === 'reject') {
+      const input = prompt('Informe o motivo da devolução:');
+      if (!input || !input.trim()) return;
+      reason = input.trim();
+    }
+    await this.run(async()=>{await this.api.request('approvals','POST',{subjectType:row.kind,subjectId:row.id,decision,...(reason?{reason}:{})});this.selected.set(null);await this.load();this.drawer.notifyMutation(row,'approve');});
+  }
   async addChecklist() {await this.run(async()=>{await this.api.request(`tasks/${this.selected()!.id}/checklist`,'POST',{title:this.newText});this.newText='';await this.loadDetail();this.drawer.notifyMutation(this.selected()!,'checklist');});}
   async toggleCheck(item:Item) {await this.run(async()=>{await this.api.request(`tasks/${this.selected()!.id}/checklist/${item.id}`,'PATCH',{completed:!item['completed']});await this.loadDetail();this.drawer.notifyMutation(this.selected()!,'checklist');});}
   async deleteCheck(item:Item) {await this.run(async()=>{await this.api.request(`tasks/${this.selected()!.id}/checklist/${item.id}`,'DELETE',{});await this.loadDetail();this.drawer.notifyMutation(this.selected()!,'checklist');});}

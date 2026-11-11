@@ -44,6 +44,10 @@
         <button [class.pinned]="item['pinnedForToday']" (click)="togglePin()" aria-label="Fixar para hoje">
           {{item['pinnedForToday'] ? '★ Fixada para hoje' : '☆ Fixar para hoje'}}
         </button>
+        @if (item['status'] === 'awaiting_approval') {
+          <button type="button" class="primary" [disabled]="saving()" (click)="approve('approve')">Aprovar</button>
+          <button type="button" [disabled]="saving()" (click)="promptReject()">Devolver para execução</button>
+        }
         <label class="status-select-label">
           <select [ngModel]="item['status']" (ngModelChange)="updateStatus($event)" [disabled]="saving()">
             @for (st of statuses; track st) {
@@ -167,5 +171,26 @@
         </div>
       }
     </section>
+
+    @if (rejectModalOpen()) {
+      <div class="modal-backdrop" (click)="closeRejectModal()"></div>
+      <section class="modal" role="dialog" aria-modal="true" aria-label="Devolver para execução">
+        <h2>Devolver para execução</h2>
+        <p>Informe o motivo da devolução para que os ajustes sejam realizados.</p>
+        <form (ngSubmit)="confirmReject()">
+          <label>
+            Motivo
+            <textarea [ngModel]="rejectReason()" (ngModelChange)="rejectReason.set($event)" name="reason" rows="3" required maxlength="1000" placeholder="Descreva o que precisa ser ajustado…"></textarea>
+          </label>
+          @if (errorMessage()) {
+            <p class="error" role="alert">{{errorMessage()}}</p>
+          }
+          <div class="actions">
+            <button type="button" [disabled]="saving()" (click)="closeRejectModal()">Cancelar</button>
+            <button type="submit" class="primary" [disabled]="saving() || !rejectReason().trim()">Confirmar devolução</button>
+          </div>
+        </form>
+      </section>
+    }
   }
 </div>

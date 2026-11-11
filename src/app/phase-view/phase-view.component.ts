@@ -52,6 +52,10 @@ export class PhaseViewComponent implements OnInit, OnDestroy {
   includeClosed = signal<ClosedWorkState[]>([]);
   search = signal('');
   temporal = signal('all');
+  saving = signal(false);
+  actionError = signal('');
+  rejectModalOpen = signal(false);
+  rejectReason = signal('');
 
   breadcrumbs = computed(() => entityBreadcrumbs(this.phase()));
   navigateCrumb(crumb: BreadcrumbCrumb) { if (crumb.route) void this.router.navigate(crumb.route); }
@@ -153,6 +157,54 @@ export class PhaseViewComponent implements OnInit, OnDestroy {
 
   async openTask(task: Item): Promise<void> {
     await this.router.navigate(['/tarefas', task.id]);
+  }
+
+  async approve(decision: 'approve' | 'reject', reason?: string): Promise<void> {
+    if (!this.phaseId || this.saving()) return;
+    this.saving.set(true);
+    this.actionError.set('');
+    try {
+      const payload: { subjectType: string; subjectId: string; decision: string; reason?: string } = {
+        subjectType: 'phase',
+        subjectId: this.phaseId,
+        decision,
+      };
+      if (decision === 'reject') {
+        payload.reason = reason?.trim();
+      }
+      await this.api.request('approvals', 'POST', payload);
+      this.rejectModalOpen.set(false);
+      this.rejectReason.set('');
+      if (this.phase()) {
+        this.drawer.notifyMutation(this.phase()!, 'approve');
+      }
+      await this.load();
+    } catch (error) {
+      this.actionError.set(error instanceof Error ? error.message : 'Falha ao processar aprovação.');
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
+  promptReject(): void {
+    this.actionError.set('');
+    this.rejectReason.set('');
+    this.rejectModalOpen.set(true);
+  }
+
+  closeRejectModal(): void {
+    if (this.saving()) return;
+    this.rejectModalOpen.set(false);
+    this.rejectReason.set('');
+  }
+
+  confirmReject(): void {
+    const reason = this.rejectReason().trim();
+    if (!reason) {
+      this.actionError.set('Informe o motivo da devolução.');
+      return;
+    }
+    void this.approve('reject', reason);
   }
 
   back(): void {
