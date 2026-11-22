@@ -311,4 +311,159 @@ describe('PhaseViewComponent', () => {
     expect(filteredButtons[0].textContent).toContain('Atividade 44');
     fixture.destroy();
   });
+
+  it('switches between Lista, Grafo, and Linha do tempo and synchronizes filters in phase view', async () => {
+    const today = new Date();
+    const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const yesterday = new Date(today.getTime() - 86_400_000);
+    const yesterdayIso = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+    const tomorrow = new Date(today.getTime() + 86_400_000);
+    const tomorrowIso = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
+
+    const allTasks = [
+      { id: 'task-1', title: 'Checklist Inicial', status: 'completed', dueDate: yesterdayIso, description: 'Concluída' },
+      { id: 'task-2', title: 'Executar Revisão', status: 'in_progress', dueDate: todayIso, description: 'Foco principal' },
+      { id: 'task-3', title: 'Ajuste Atrasado', status: 'todo', dueDate: yesterdayIso, description: 'Pendente' },
+    ];
+    const graphResponse = {
+      phases: [],
+      tasks: [
+        {
+          id: 'task-1',
+          type: 'task',
+          title: 'Checklist Inicial',
+          status: 'completed',
+          taskType: 'simple',
+          dueDate: yesterdayIso,
+          size: 'xs',
+          containerType: 'phase',
+          containerId: 'phase-1',
+          processId: 'process-9',
+          dependencyState: 'independent',
+          dependencyBlockers: [],
+          canConnect: true,
+        },
+        {
+          id: 'task-2',
+          type: 'task',
+          title: 'Executar Revisão',
+          status: 'in_progress',
+          taskType: 'simple',
+          dueDate: todayIso,
+          size: 's',
+          containerType: 'phase',
+          containerId: 'phase-1',
+          processId: 'process-9',
+          dependencyState: 'released',
+          dependencyBlockers: [],
+          canConnect: true,
+        },
+        {
+          id: 'task-3',
+          type: 'task',
+          title: 'Ajuste Atrasado',
+          status: 'todo',
+          taskType: 'simple',
+          dueDate: yesterdayIso,
+          size: 'xs',
+          containerType: 'phase',
+          containerId: 'phase-1',
+          processId: 'process-9',
+          dependencyState: 'independent',
+          dependencyBlockers: [],
+          canConnect: true,
+        },
+        {
+          id: 'task-4',
+          type: 'task',
+          title: 'Entrega Futura',
+          status: 'todo',
+          taskType: 'simple',
+          dueDate: tomorrowIso,
+          size: 'xs',
+          containerType: 'phase',
+          containerId: 'phase-1',
+          processId: 'process-9',
+          dependencyState: 'independent',
+          dependencyBlockers: [],
+          canConnect: true,
+        },
+      ],
+      edges: [
+        {
+          id: 'edge-1',
+          predecessorType: 'task',
+          predecessorId: 'task-1',
+          successorType: 'task',
+          successorId: 'task-2',
+          canRemove: true,
+        },
+      ],
+    };
+
+    const api = {
+      request: vi.fn(async (path: string) => {
+        if (path.startsWith('dependencies?')) return graphResponse;
+        return phaseApiResponse(path);
+      }),
+      requestWithClosed: vi.fn(async (_path: string, closed: string[]) => ({
+        tasks: allTasks.filter(task => task.status !== 'completed' || closed.includes('completed')),
+      })),
+    };
+    const router = { navigate: vi.fn() };
+
+    await TestBed.configureTestingModule({
+      imports: [PhaseViewComponent],
+      providers: [
+        { provide: ApiService, useValue: api },
+        { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ id: 'phase-1' })) } },
+        { provide: Router, useValue: router },
+      ],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(PhaseViewComponent);
+    fixture.detectChanges();
+    await fixture.componentInstance.load();
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const tabs = Array.from(el.querySelectorAll('.process-view-tabs button[role="tab"]')) as HTMLButtonElement[];
+    expect(tabs.map(t => t.textContent?.trim())).toEqual(['☷ Lista', '◇ Grafo', '◷ Linha do tempo']);
+
+    tabs[1].click();
+    fixture.detectChanges();
+    expect(el.querySelector('app-dependency-graph')).toBeTruthy();
+    expect(el.querySelector('app-timeline-gantt')).toBeNull();
+    expect(el.querySelector('.phase-task-list')).toBeNull();
+
+    tabs[2].click();
+    fixture.detectChanges();
+    expect(el.querySelector('app-timeline-gantt')).toBeTruthy();
+    expect(el.querySelector('app-dependency-graph')).toBeNull();
+    expect(el.querySelector('[data-node-key="task:task-1"]')).toBeNull();
+    expect(el.querySelector('[data-node-key="task:task-2"]')).toBeTruthy();
+    expect(el.querySelector('[data-edge-id="edge-1"]')).toBeNull();
+
+    await fixture.componentInstance.toggleClosed('completed', true);
+    fixture.detectChanges();
+    expect(el.querySelector('[data-node-key="task:task-1"]')).toBeTruthy();
+    expect(el.querySelector('[data-edge-id="edge-1"]')).toBeTruthy();
+
+    fixture.componentInstance.temporal.set('today');
+    fixture.detectChanges();
+    expect(el.querySelector('[data-node-key="task:task-2"]')).toBeTruthy();
+    expect(el.querySelector('[data-node-key="task:task-3"]')).toBeNull();
+
+    fixture.componentInstance.temporal.set('all');
+    fixture.componentInstance.search.set('Foco principal');
+    fixture.detectChanges();
+    expect(el.querySelector('[data-node-key="task:task-2"]')).toBeTruthy();
+    expect(el.querySelector('[data-node-key="task:task-3"]')).toBeNull();
+
+    (el.querySelector('[data-node-key="task:task-2"]') as HTMLButtonElement)?.click();
+    expect(router.navigate).toHaveBeenCalledWith(['/tarefas', 'task-2']);
+
+    await fixture.componentInstance.toggleClosed('completed', false);
+    fixture.destroy();
+  });
 });

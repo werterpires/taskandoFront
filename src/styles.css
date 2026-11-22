@@ -211,9 +211,11 @@ legend { color: #506355; font-weight: 800; }
 .process-heading > .badge { flex: none; }
 .process-readonly { margin: 0; }
 .process-stats { margin: 0; }
-.process-toolbar { align-items: flex-start; }
+.process-toolbar { flex-wrap: wrap; align-items: center; }
 .process-toolbar > .actions { justify-content: flex-end; }
 .process-toolbar select { min-width: 170px; }
+.process-view-tabs { flex-wrap: wrap; }
+.process-timeline-panel { padding: 16px; }
 .process-columns { display: grid; grid-template-columns: 1fr 1fr; }
 .process-columns > section { min-width: 0; }
 .process-columns > section + section { border-left: 1px solid var(--line); }
@@ -254,6 +256,7 @@ button.process-item > div {
 .task-page .page-heading .actions { display: flex; align-items: center; gap: 10px; }
 .task-page .page-heading .actions button.pinned { background: #fdf5e6; border-color: #f3d19c; color: #8c5d18; font-weight: 600; }
 .dependency-projection { margin-bottom: 16px; }
+.process-work .dependency-projection { margin-bottom: 0; }
 .process-section-heading .eyebrow { margin-bottom: 4px !important; }
 .dependency-nodes { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; padding: 18px; }
 .dependency-nodes article { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 5px 10px; border: 1px solid var(--line); border-radius: 9px; padding: 12px; }

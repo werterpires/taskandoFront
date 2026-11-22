@@ -59,6 +59,29 @@
 
     <section class="surface process-work">
       <div class="toolbar process-toolbar">
+        <div class="tabs process-view-tabs" role="tablist" aria-label="Modo de visualização">
+          <button
+            type="button"
+            role="tab"
+            [class.chosen]="viewMode() === 'list'"
+            [attr.aria-selected]="viewMode() === 'list'"
+            (click)="viewMode.set('list')"
+          >☷ Lista</button>
+          <button
+            type="button"
+            role="tab"
+            [class.chosen]="viewMode() === 'graph'"
+            [attr.aria-selected]="viewMode() === 'graph'"
+            (click)="viewMode.set('graph')"
+          >◇ Grafo</button>
+          <button
+            type="button"
+            role="tab"
+            [class.chosen]="viewMode() === 'timeline'"
+            [attr.aria-selected]="viewMode() === 'timeline'"
+            (click)="viewMode.set('timeline')"
+          >◷ Linha do tempo</button>
+        </div>
         <div class="closed-filters" aria-label="Exibir estados encerrados">
           @for (closed of closedStates; track closed) {
             <label class="check-label"><input type="checkbox" [checked]="isIncluded(closed)" (change)="toggleClosed(closed, $any($event.target).checked)">Mostrar {{closedLabels[closed].toLocaleLowerCase()}}</label>
@@ -75,38 +98,45 @@
         </div>
       </div>
 
-      @if (!visibleTasks().length) {
-        <div class="empty"><span class="empty-symbol">❧</span><h2>Nenhuma tarefa nesta fase.</h2><p>Ajuste os filtros ou inclua tarefas encerradas para consultar o histórico.</p></div>
+      @if (viewMode() === 'list') {
+        @if (!visibleTasks().length) {
+          <div class="empty"><span class="empty-symbol">❧</span><h2>Nenhuma tarefa nesta fase.</h2><p>Ajuste os filtros ou inclua tarefas encerradas para consultar o histórico.</p></div>
+        } @else {
+          <div class="item-list phase-task-list">
+            <cdk-virtual-scroll-viewport class="process-list-viewport" [itemSize]="68">
+              <button
+                type="button"
+                class="process-item"
+                *cdkVirtualFor="let task of visibleTasks(); trackBy: trackById"
+                [attr.aria-label]="'Abrir tarefa ' + task.title"
+                (click)="openTask(task)"
+              >
+                <div><strong>{{task.title}}</strong><p>{{task['description'] || (task['dueDate'] | dateBr) || 'Sem descrição ou prazo.'}}</p></div>
+                <span class="badge" [attr.data-status]="task['status']">{{statusLabels[task['status']] || task['status']}}</span>
+              </button>
+            </cdk-virtual-scroll-viewport>
+          </div>
+        }
+      } @else if (viewMode() === 'graph') {
+        <div class="dependency-projection">
+          <header class="process-section-heading"><div><p class="eyebrow">DEPENDÊNCIAS DA FASE</p><h2>Grafo de Atividades</h2></div><span>{{graph().edges.length}} ligações</span></header>
+          <app-dependency-graph
+            [graph]="graph()"
+            containerType="phase"
+            [containerId]="item.id"
+            [readOnly]="false"
+            (graphChange)="graph.set($event)"
+          />
+        </div>
       } @else {
-        <div class="item-list phase-task-list">
-          <cdk-virtual-scroll-viewport class="process-list-viewport" [itemSize]="68">
-            <button
-              type="button"
-              class="process-item"
-              *cdkVirtualFor="let task of visibleTasks(); trackBy: trackById"
-              [attr.aria-label]="'Abrir tarefa ' + task.title"
-              (click)="openTask(task)"
-            >
-              <div><strong>{{task.title}}</strong><p>{{task['description'] || (task['dueDate'] | dateBr) || 'Sem descrição ou prazo.'}}</p></div>
-              <span class="badge" [attr.data-status]="task['status']">{{statusLabels[task['status']] || task['status']}}</span>
-            </button>
-          </cdk-virtual-scroll-viewport>
+        <div class="process-timeline-panel">
+          <app-timeline-gantt
+            [graph]="timelineGraph()"
+            containerType="phase"
+          />
         </div>
       }
     </section>
-
-    @if (graph().tasks.length > 0) {
-      <section class="surface dependency-projection">
-        <header class="process-section-heading"><div><p class="eyebrow">DEPENDÊNCIAS DA FASE</p><h2>Grafo de Atividades</h2></div><span>{{graph().edges.length}} ligações</span></header>
-        <app-dependency-graph
-          [graph]="graph()"
-          containerType="phase"
-          [containerId]="item.id"
-          [readOnly]="false"
-          (graphChange)="graph.set($event)"
-        />
-      </section>
-    }
 
     @if (rejectModalOpen()) {
       <div class="modal-backdrop" (click)="closeRejectModal()"></div>

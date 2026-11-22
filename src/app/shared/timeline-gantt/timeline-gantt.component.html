@@ -1,0 +1,347 @@
+<section class="timeline-gantt" aria-label="Linha do tempo do planejamento">
+  <header class="timeline-toolbar">
+    <div class="timeline-heading">
+      <div>
+        <strong>Linha do tempo</strong>
+        <p>Barras estimam duração pelo porte quando não há horário explícito. Clique em um item para abrir detalhes.</p>
+      </div>
+      <div class="timeline-summary" aria-label="Resumo da linha do tempo">
+        <span class="summary-chip">{{ layout().nodes.length }} agendados</span>
+        @if (conflictCount() > 0) {
+          <span class="summary-chip summary-conflict">{{ conflictCount() }} em conflito</span>
+        }
+        @if (overdueCount() > 0) {
+          <span class="summary-chip summary-overdue">{{ overdueCount() }} atrasados</span>
+        }
+        @if (blockedCount() > 0) {
+          <span class="summary-chip summary-blocked">{{ blockedCount() }} bloqueados</span>
+        }
+      </div>
+    </div>
+
+    <div class="timeline-controls">
+      <div class="timeline-legend" aria-label="Legenda">
+        <span class="legend-item"><i class="legend-dot legend-milestone" aria-hidden="true">◆</i> Marco</span>
+        <span class="legend-item"><i class="legend-dot legend-today" aria-hidden="true"></i> Hoje</span>
+        <span class="legend-item"><i class="legend-dot legend-blocked" aria-hidden="true"></i> Bloqueado</span>
+        <span class="legend-item"><i class="legend-dot legend-conflict" aria-hidden="true"></i> Conflito</span>
+        <span class="legend-item"><i class="legend-dot legend-overdue" aria-hidden="true"></i> Atrasado</span>
+      </div>
+
+      <div class="timeline-actions">
+        @if (layout().todayX !== null) {
+          <button type="button" class="timeline-today-jump" (click)="scrollToToday()">Hoje</button>
+        }
+        <div class="zoom-toggle" role="group" aria-label="Nível de zoom">
+          @for (option of zoomOptions; track option.value) {
+            <button
+              type="button"
+              class="zoom-button"
+              [class.active]="zoom() === option.value"
+              [attr.aria-pressed]="zoom() === option.value"
+              [attr.data-zoom]="option.value"
+              (click)="setZoom(option.value)"
+            >{{ option.label }}</button>
+          }
+        </div>
+      </div>
+    </div>
+  </header>
+
+  @if (inspectedEdge(); as inspected) {
+    <div class="timeline-edge-inspector" [class.is-conflict]="inspected.edge.hasConflict" role="status" aria-live="polite">
+      <div class="inspector-copy">
+        <span class="inspector-tag">{{ inspected.edge.hasConflict ? 'Conflito de dependência' : 'Dependência' }}</span>
+        <strong>{{ inspected.predecessorTitle }}</strong>
+        <span aria-hidden="true">→</span>
+        <strong>{{ inspected.successorTitle }}</strong>
+        @if (inspected.edge.hasConflict) {
+          <span class="inspector-note">A predecessora termina após o início ou prazo da sucessora.</span>
+        }
+      </div>
+      <div class="inspector-actions">
+        @if (inspected.predecessor; as pred) {
+          <button type="button" class="inspector-link" (click)="openNode(pred.node)">Abrir predecessora</button>
+        }
+        @if (inspected.successor; as succ) {
+          <button type="button" class="inspector-link" (click)="openNode(succ.node)">Abrir sucessora</button>
+        }
+        @if (selectedEdgeId() === inspected.edge.id) {
+          <button type="button" class="inspector-close" aria-label="Limpar seleção da dependência" (click)="clearInspectedEdge()">×</button>
+        }
+      </div>
+    </div>
+  }
+
+  @if (!layout().nodes.length && !layout().unscheduled.length) {
+    <div class="timeline-empty">
+      <span aria-hidden="true">◇</span>
+      <p>Nenhuma atividade disponível nesta projeção.</p>
+    </div>
+  } @else {
+    @if (!layout().nodes.length) {
+      <div class="timeline-empty timeline-empty-scheduled">
+        <span aria-hidden="true">◷</span>
+        <p>Nenhum item com data ou prazo definido para exibir na linha do tempo.</p>
+      </div>
+    } @else {
+      <div
+        #viewport
+        class="timeline-viewport"
+        tabindex="0"
+        aria-label="Grade da linha do tempo. Use rolagem horizontal para navegar nas datas."
+        (click)="selectedEdgeId.set(null)"
+      >
+        <div class="timeline-canvas" [style.width.px]="layout().width">
+          <div class="timeline-axis" [style.width.px]="layout().width" aria-hidden="true">
+            @for (tick of layout().ticks; track tick.key) {
+              <div
+                class="timeline-tick"
+                [class.is-weekend]="tick.isWeekend"
+                [class.is-today]="tick.isToday"
+                [style.left.px]="tick.x"
+                [style.width.px]="tick.width"
+              >
+                <span class="tick-primary">{{ tick.label }}</span>
+                <small class="tick-secondary">{{ tick.secondaryLabel }}</small>
+              </div>
+            }
+          </div>
+
+          <div class="timeline-body" [style.width.px]="layout().width" [style.height.px]="layout().height">
+            @for (tick of layout().ticks; track tick.key) {
+              <div
+                class="timeline-grid-col"
+                [class.is-weekend]="tick.isWeekend"
+                [class.is-today]="tick.isToday"
+                [style.left.px]="tick.x"
+                [style.width.px]="tick.width"
+                aria-hidden="true"
+              ></div>
+            }
+
+            @for (lane of layout().lanes; track lane.type) {
+              <section
+                class="timeline-lane"
+                [attr.data-lane]="lane.type"
+                [style.top.px]="lane.y"
+                [style.height.px]="lane.height"
+                [attr.aria-label]="lane.label"
+              >
+                <div class="timeline-lane-header">
+                  <h3>{{ lane.label }}</h3>
+                  <span class="lane-count">{{ lane.nodeCount }}</span>
+                </div>
+              </section>
+            }
+
+            @if (layout().todayX !== null) {
+              <div
+                class="timeline-today-line"
+                [style.left.px]="layout().todayX"
+                role="presentation"
+                aria-label="Linha de hoje"
+              >
+                <span class="today-badge">Hoje</span>
+              </div>
+            }
+
+            <svg
+              class="timeline-edges"
+              [attr.width]="layout().width"
+              [attr.height]="layout().height"
+              aria-label="Setas de dependência"
+            >
+              <defs>
+                <marker
+                  [attr.id]="markerNormalId"
+                  markerWidth="8"
+                  markerHeight="8"
+                  refX="7"
+                  refY="4"
+                  orient="auto"
+                  markerUnits="strokeWidth"
+                >
+                  <path d="M 0 0 L 8 4 L 0 8 z" class="marker-normal"></path>
+                </marker>
+                <marker
+                  [attr.id]="markerConflictId"
+                  markerWidth="8"
+                  markerHeight="8"
+                  refX="7"
+                  refY="4"
+                  orient="auto"
+                  markerUnits="strokeWidth"
+                >
+                  <path d="M 0 0 L 8 4 L 0 8 z" class="marker-conflict"></path>
+                </marker>
+                <marker
+                  [attr.id]="markerActiveId"
+                  markerWidth="8"
+                  markerHeight="8"
+                  refX="7"
+                  refY="4"
+                  orient="auto"
+                  markerUnits="strokeWidth"
+                >
+                  <path d="M 0 0 L 8 4 L 0 8 z" class="marker-active"></path>
+                </marker>
+              </defs>
+
+              @for (edge of layout().edges; track edge.id) {
+                <g
+                  class="timeline-edge-group"
+                  [class.has-conflict]="edge.hasConflict"
+                  [class.is-active]="isEdgeHighlighted(edge)"
+                  [class.is-selected]="selectedEdgeId() === edge.id"
+                  [attr.data-edge-id]="edge.id"
+                  [attr.data-conflict]="edge.hasConflict"
+                >
+                  <path
+                    class="timeline-edge-path"
+                    [attr.d]="edge.path"
+                    [attr.marker-end]="edgeMarkerUrl(edge)"
+                  ></path>
+                  <path
+                    class="timeline-edge-hit"
+                    [attr.d]="edge.path"
+                    tabindex="0"
+                    role="button"
+                    [attr.aria-label]="edgeAriaLabel(edge)"
+                    [attr.aria-pressed]="selectedEdgeId() === edge.id"
+                    (mouseenter)="hoveredEdgeId.set(edge.id)"
+                    (mouseleave)="hoveredEdgeId.set(null)"
+                    (focus)="hoveredEdgeId.set(edge.id)"
+                    (blur)="hoveredEdgeId.set(null)"
+                    (click)="selectEdge(edge, $event)"
+                    (keydown.enter)="selectEdge(edge, $event)"
+                    (keydown.space)="selectEdge(edge, $event)"
+                  ></path>
+                </g>
+              }
+            </svg>
+
+            @for (item of layout().nodes; track item.key) {
+              <button
+                type="button"
+                class="timeline-node"
+                [class.timeline-bar]="item.kind === 'bar'"
+                [class.timeline-milestone]="item.kind === 'milestone'"
+                [class.is-blocked]="item.isBlocked"
+                [class.is-conflict]="item.hasDateConflict"
+                [class.is-overdue]="item.isOverdue"
+                [class.is-closed]="item.isClosed"
+                [class.is-edge-linked]="isNodeHighlightedByEdge(item.key)"
+                [attr.data-node-key]="item.key"
+                [attr.data-node-type]="item.node.type"
+                [attr.data-kind]="item.kind"
+                [attr.data-status]="item.node.status"
+                [attr.data-blocked]="item.isBlocked"
+                [attr.data-conflict]="item.hasDateConflict"
+                [attr.data-overdue]="item.isOverdue"
+                [attr.data-anchor-source]="item.anchorSource"
+                [style.left.px]="item.x"
+                [style.top.px]="item.y"
+                [style.width.px]="item.width"
+                [style.height.px]="item.height"
+                [attr.aria-label]="nodeAriaLabel(item)"
+                [attr.title]="nodeTooltip(item)"
+                (mouseenter)="hoveredNodeKey.set(item.key)"
+                (mouseleave)="hoveredNodeKey.set(null)"
+                (focus)="hoveredNodeKey.set(item.key)"
+                (blur)="hoveredNodeKey.set(null)"
+                (click)="openNode(item.node); $event.stopPropagation()"
+              >
+                @if (item.kind === 'milestone') {
+                  <span class="milestone-diamond" aria-hidden="true"></span>
+                } @else {
+                  <span class="bar-shape" [attr.data-status]="item.node.status" [attr.data-node-type]="item.node.type">
+                    @if (hasInlineLabel(item)) {
+                      <span class="node-title">{{ item.node.title }}</span>
+                      <span class="node-badges">
+                        <span class="badge-pill badge-status">{{ statusLabel(item.node.status) }}</span>
+                        @if (item.isBlocked) {
+                          <span class="badge-pill badge-blocked" data-indicator="blocked">Bloqueado</span>
+                        }
+                        @if (item.hasDateConflict) {
+                          <span class="badge-pill badge-conflict" data-indicator="conflict">Conflito</span>
+                        }
+                        @if (item.isOverdue) {
+                          <span class="badge-pill badge-overdue" data-indicator="overdue">Atrasado</span>
+                        }
+                      </span>
+                    }
+                  </span>
+                }
+
+                @if (!hasInlineLabel(item)) {
+                  <span class="node-side-label">
+                    <span class="node-title">{{ item.node.title }}</span>
+                    <span class="node-badges">
+                      <span class="badge-pill badge-status">{{ statusLabel(item.node.status) }}</span>
+                      @if (item.isBlocked) {
+                        <span class="badge-pill badge-blocked" data-indicator="blocked">Bloqueado</span>
+                      }
+                      @if (item.hasDateConflict) {
+                        <span class="badge-pill badge-conflict" data-indicator="conflict">Conflito</span>
+                      }
+                      @if (item.isOverdue) {
+                        <span class="badge-pill badge-overdue" data-indicator="overdue">Atrasado</span>
+                      }
+                    </span>
+                  </span>
+                }
+              </button>
+            }
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (layout().unscheduled.length > 0) {
+      <section class="timeline-unscheduled" aria-label="Atividades sem prazo definido">
+        <button
+          type="button"
+          class="unscheduled-toggle"
+          [attr.aria-expanded]="isUnscheduledOpen()"
+          (click)="toggleUnscheduled()"
+        >
+          <span class="unscheduled-title">
+            <span class="unscheduled-chevron" aria-hidden="true">{{ isUnscheduledOpen() ? '▾' : '▸' }}</span>
+            <strong>Sem prazo definido</strong>
+            <span class="unscheduled-count">{{ layout().unscheduled.length }}</span>
+          </span>
+          <span class="unscheduled-hint">{{ isUnscheduledOpen() ? 'Ocultar' : 'Mostrar' }}</span>
+        </button>
+
+        @if (isUnscheduledOpen()) {
+          <ul class="unscheduled-list">
+            @for (item of layout().unscheduled; track item.key) {
+              <li>
+                <button
+                  type="button"
+                  class="unscheduled-item"
+                  [attr.data-node-key]="item.key"
+                  [attr.data-status]="item.node.status"
+                  [attr.data-blocked]="item.isBlocked"
+                  [attr.aria-label]="unscheduledAriaLabel(item)"
+                  (click)="openNode(item.node)"
+                >
+                  <span class="unscheduled-kind">{{ nodeTypeLabel(item.node) }}</span>
+                  <strong class="unscheduled-name">{{ item.node.title }}</strong>
+                  <span class="unscheduled-badges">
+                    <span class="badge-pill badge-status">{{ statusLabel(item.node.status) }}</span>
+                    @if (item.isBlocked) {
+                      <span class="badge-pill badge-blocked" data-indicator="blocked">Bloqueado</span>
+                    }
+                    <span class="unscheduled-duration">~{{ item.durationDays }}d</span>
+                  </span>
+                </button>
+              </li>
+            }
+          </ul>
+        }
+      </section>
+    }
+  }
+</section>

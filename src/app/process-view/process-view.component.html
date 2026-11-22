@@ -63,6 +63,29 @@
 
     <section class="surface process-work">
       <div class="toolbar process-toolbar">
+        <div class="tabs process-view-tabs" role="tablist" aria-label="Modo de visualização">
+          <button
+            type="button"
+            role="tab"
+            [class.chosen]="viewMode() === 'list'"
+            [attr.aria-selected]="viewMode() === 'list'"
+            (click)="viewMode.set('list')"
+          >☷ Lista</button>
+          <button
+            type="button"
+            role="tab"
+            [class.chosen]="viewMode() === 'graph'"
+            [attr.aria-selected]="viewMode() === 'graph'"
+            (click)="viewMode.set('graph')"
+          >◇ Grafo</button>
+          <button
+            type="button"
+            role="tab"
+            [class.chosen]="viewMode() === 'timeline'"
+            [attr.aria-selected]="viewMode() === 'timeline'"
+            (click)="viewMode.set('timeline')"
+          >◷ Linha do tempo</button>
+        </div>
         <div class="closed-filters" aria-label="Exibir estados encerrados">
           @for (closed of closedStates; track closed) {
             <label class="check-label"><input type="checkbox" [checked]="isIncluded(closed)" (change)="toggleClosed(closed, $any($event.target).checked)">Mostrar {{closedLabels[closed].toLocaleLowerCase()}}</label>
@@ -79,61 +102,70 @@
         </div>
       </div>
 
-      @if (!hasVisibleContent()) {
-        <div class="empty"><span class="empty-symbol">❧</span><h2>Nenhum item neste recorte.</h2><p>Ajuste os filtros ou inclua estados encerrados para consultar o histórico.</p></div>
+      @if (viewMode() === 'list') {
+        @if (!hasVisibleContent()) {
+          <div class="empty"><span class="empty-symbol">❧</span><h2>Nenhum item neste recorte.</h2><p>Ajuste os filtros ou inclua estados encerrados para consultar o histórico.</p></div>
+        } @else {
+          <div class="process-columns">
+            <section>
+              <header><h2>Fases</h2><span>{{visiblePhases().length}}</span></header>
+              @if (visiblePhases().length) {
+                <cdk-virtual-scroll-viewport class="process-list-viewport" [itemSize]="68">
+                  <button
+                    type="button"
+                    class="process-item"
+                    *cdkVirtualFor="let phase of visiblePhases(); trackBy: trackById"
+                    [attr.aria-label]="'Abrir fase ' + phase.title"
+                    (click)="openPhase(phase)"
+                  >
+                    <div><strong>{{phase.title}}</strong><p>{{phase['description'] || 'Sem descrição.'}}</p></div>
+                    <span class="badge" [attr.data-status]="phase['status']">{{statusLabels[phase['status']] || phase['status']}}</span>
+                  </button>
+                </cdk-virtual-scroll-viewport>
+              } @else {
+                <p class="muted process-column-empty">Nenhuma fase neste recorte.</p>
+              }
+            </section>
+            <section>
+              <header><h2>Tarefas diretas</h2><span>{{visibleTasks().length}}</span></header>
+              @if (visibleTasks().length) {
+                <cdk-virtual-scroll-viewport class="process-list-viewport" [itemSize]="68">
+                  <button
+                    type="button"
+                    class="process-item"
+                    *cdkVirtualFor="let task of visibleTasks(); trackBy: trackById"
+                    [attr.aria-label]="'Abrir tarefa ' + task.title"
+                    (click)="openTask(task)"
+                  >
+                    <div><strong>{{task.title}}</strong><p>{{task['description'] || (task['dueDate'] | dateBr) || 'Sem descrição ou prazo.'}}</p></div>
+                    <span class="badge" [attr.data-status]="task['status']">{{statusLabels[task['status']] || task['status']}}</span>
+                  </button>
+                </cdk-virtual-scroll-viewport>
+              } @else {
+                <p class="muted process-column-empty">Nenhuma tarefa direta neste recorte.</p>
+              }
+            </section>
+          </div>
+        }
+      } @else if (viewMode() === 'graph') {
+        <div class="dependency-projection">
+          <header class="process-section-heading"><div><p class="eyebrow">PROJEÇÃO COMPLETA</p><h2>Dependências</h2></div><span>{{graph().edges.length}} ligações</span></header>
+          <app-dependency-graph
+            [graph]="graph()"
+            containerType="process"
+            [containerId]="item.id"
+            [readOnly]="readOnly()"
+            (graphChange)="graph.set($event)"
+          />
+        </div>
       } @else {
-        <div class="process-columns">
-          <section>
-            <header><h2>Fases</h2><span>{{visiblePhases().length}}</span></header>
-            @if (visiblePhases().length) {
-              <cdk-virtual-scroll-viewport class="process-list-viewport" [itemSize]="68">
-                <button
-                  type="button"
-                  class="process-item"
-                  *cdkVirtualFor="let phase of visiblePhases(); trackBy: trackById"
-                  [attr.aria-label]="'Abrir fase ' + phase.title"
-                  (click)="openPhase(phase)"
-                >
-                  <div><strong>{{phase.title}}</strong><p>{{phase['description'] || 'Sem descrição.'}}</p></div>
-                  <span class="badge" [attr.data-status]="phase['status']">{{statusLabels[phase['status']] || phase['status']}}</span>
-                </button>
-              </cdk-virtual-scroll-viewport>
-            } @else {
-              <p class="muted process-column-empty">Nenhuma fase neste recorte.</p>
-            }
-          </section>
-          <section>
-            <header><h2>Tarefas diretas</h2><span>{{visibleTasks().length}}</span></header>
-            @if (visibleTasks().length) {
-              <cdk-virtual-scroll-viewport class="process-list-viewport" [itemSize]="68">
-                <button
-                  type="button"
-                  class="process-item"
-                  *cdkVirtualFor="let task of visibleTasks(); trackBy: trackById"
-                  [attr.aria-label]="'Abrir tarefa ' + task.title"
-                  (click)="openTask(task)"
-                >
-                  <div><strong>{{task.title}}</strong><p>{{task['description'] || (task['dueDate'] | dateBr) || 'Sem descrição ou prazo.'}}</p></div>
-                  <span class="badge" [attr.data-status]="task['status']">{{statusLabels[task['status']] || task['status']}}</span>
-                </button>
-              </cdk-virtual-scroll-viewport>
-            } @else {
-              <p class="muted process-column-empty">Nenhuma tarefa direta neste recorte.</p>
-            }
-          </section>
+        <div class="process-timeline-panel">
+          <app-timeline-gantt
+            [graph]="timelineGraph()"
+            containerType="process"
+          />
         </div>
       }
-    </section>
-
-    <section class="surface dependency-projection">
-      <header class="process-section-heading"><div><p class="eyebrow">PROJEÇÃO COMPLETA</p><h2>Dependências</h2></div><span>{{graph().edges.length}} ligações</span></header>
-      <app-dependency-graph
-        [graph]="graph()"
-        containerType="process"
-        [containerId]="item.id"
-        [readOnly]="readOnly()"
-        (graphChange)="graph.set($event)"
-      />
     </section>
 
     @if (rejectModalOpen()) {

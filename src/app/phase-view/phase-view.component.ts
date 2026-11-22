@@ -11,6 +11,8 @@ import { BreadcrumbCrumb, entityBreadcrumbs } from '../shared/breadcrumb';
 import { DateBrPipe } from '../shared/date-br.pipe';
 import { LegalGateService } from '../legal/legal-gate.service';
 import { ToastService } from '../shared/toast/toast.service';
+import { TimelineGanttComponent } from '../shared/timeline-gantt/timeline-gantt.component';
+import { filterTimelineGraph, type WorkViewMode } from '../shared/timeline-gantt/timeline-filter';
 import { WorkFilterService } from '../shared/work-filter.service';
 
 type LoadState = 'loading' | 'ready' | 'forbidden' | 'not-found' | 'temporary-error';
@@ -20,7 +22,7 @@ type Progress = { percentage: number; completed: number; total: number; excluded
   selector: 'app-phase-view',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule, ScrollingModule, DependencyGraphComponent, DateBrPipe],
+  imports: [CommonModule, FormsModule, ScrollingModule, DependencyGraphComponent, TimelineGanttComponent, DateBrPipe],
   templateUrl: './phase-view.component.html',
 })
 export class PhaseViewComponent implements OnInit, OnDestroy {
@@ -60,6 +62,7 @@ export class PhaseViewComponent implements OnInit, OnDestroy {
   includeClosed = this.workFilter.includeClosed;
   search = signal('');
   temporal = signal('all');
+  viewMode = signal<WorkViewMode>('list');
   saving = signal(false);
   actionError = signal('');
   rejectModalOpen = signal(false);
@@ -80,6 +83,15 @@ export class PhaseViewComponent implements OnInit, OnDestroy {
       return true;
     });
   });
+
+  timelineGraph = computed(() =>
+    filterTimelineGraph(this.graph(), {
+      includeClosed: this.includeClosed(),
+      search: this.search(),
+      temporal: this.temporal(),
+      tasks: this.tasks(),
+    }),
+  );
 
   constructor() {
     effect(() => {

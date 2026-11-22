@@ -169,6 +169,13 @@ describe('ProcessViewComponent', () => {
     await fixture.componentInstance.load();
     fixture.detectChanges();
 
+    const graphTab = Array.from(
+      fixture.nativeElement.querySelectorAll('.process-view-tabs button[role="tab"]') as NodeListOf<HTMLButtonElement>,
+    ).find(btn => btn.textContent?.includes('Grafo'));
+    expect(graphTab).toBeTruthy();
+    graphTab?.click();
+    fixture.detectChanges();
+
     const nodeBtn: HTMLButtonElement | null = fixture.nativeElement.querySelector('button.node-heading[aria-label="Abrir detalhes de Tarefa 1"]');
     expect(nodeBtn).not.toBeNull();
     nodeBtn?.click();
@@ -413,6 +420,205 @@ describe('ProcessViewComponent', () => {
     expect(columns[0].querySelector('.process-column-empty')).toBeTruthy();
     expect(columns[1].querySelectorAll('button.process-item')).toHaveLength(1);
     expect(columns[1].textContent).toContain('Tarefa 49');
+    fixture.destroy();
+  });
+
+  it('switches between Lista, Grafo, and Linha do tempo and synchronizes timeline filters', async () => {
+    const today = new Date();
+    const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const yesterday = new Date(today.getTime() - 86_400_000);
+    const yesterdayIso = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+    const nextWeek = new Date(today.getTime() + 5 * 86_400_000);
+    const nextWeekIso = `${nextWeek.getFullYear()}-${String(nextWeek.getMonth() + 1).padStart(2, '0')}-${String(nextWeek.getDate()).padStart(2, '0')}`;
+
+    const phases = [
+      { id: 'phase-open', title: 'Fase Aberta', status: 'in_progress', description: 'Escopo inicial' },
+      { id: 'phase-done', title: 'Fase Concluída', status: 'completed', description: 'Encerrada' },
+    ];
+    const tasks = [
+      { id: 'task-overdue', title: 'Tarefa Atrasada', status: 'todo', dueDate: yesterdayIso, description: 'Urgente' },
+      { id: 'task-today', title: 'Tarefa Hoje', status: 'in_progress', dueDate: todayIso, description: 'Meta diária' },
+      { id: 'task-nodue', title: 'Tarefa Sem Prazo', status: 'todo', description: 'Backlog' },
+      { id: 'task-archived', title: 'Tarefa Arquivada', status: 'archived', dueDate: nextWeekIso, description: 'Histórico' },
+    ];
+    const graphResponse = {
+      phases: [
+        {
+          id: 'phase-open',
+          type: 'phase',
+          title: 'Fase Aberta',
+          status: 'in_progress',
+          size: 's',
+          createdAt: `${yesterdayIso}T10:00:00.000Z`,
+          containerType: 'process',
+          containerId: 'process-1',
+          processId: 'process-1',
+          dependencyState: 'blocked',
+          dependencyBlockers: [{ type: 'phase', id: 'phase-done', title: 'Fase Concluída' }],
+          canConnect: true,
+        },
+        {
+          id: 'phase-done',
+          type: 'phase',
+          title: 'Fase Concluída',
+          status: 'completed',
+          size: 's',
+          createdAt: `${yesterdayIso}T09:00:00.000Z`,
+          containerType: 'process',
+          containerId: 'process-1',
+          processId: 'process-1',
+          dependencyState: 'independent',
+          dependencyBlockers: [],
+          canConnect: true,
+        },
+      ],
+      tasks: [
+        {
+          id: 'task-overdue',
+          type: 'task',
+          title: 'Tarefa Atrasada',
+          status: 'todo',
+          taskType: 'simple',
+          dueDate: yesterdayIso,
+          size: 'xs',
+          containerType: 'process',
+          containerId: 'process-1',
+          processId: 'process-1',
+          dependencyState: 'independent',
+          dependencyBlockers: [],
+          canConnect: true,
+        },
+        {
+          id: 'task-today',
+          type: 'task',
+          title: 'Tarefa Hoje',
+          status: 'in_progress',
+          taskType: 'simple',
+          dueDate: todayIso,
+          size: 'xs',
+          containerType: 'process',
+          containerId: 'process-1',
+          processId: 'process-1',
+          dependencyState: 'independent',
+          dependencyBlockers: [],
+          canConnect: true,
+        },
+        {
+          id: 'task-nodue',
+          type: 'task',
+          title: 'Tarefa Sem Prazo',
+          status: 'todo',
+          taskType: 'simple',
+          size: 's',
+          containerType: 'process',
+          containerId: 'process-1',
+          processId: 'process-1',
+          dependencyState: 'independent',
+          dependencyBlockers: [],
+          canConnect: true,
+        },
+        {
+          id: 'task-archived',
+          type: 'task',
+          title: 'Tarefa Arquivada',
+          status: 'archived',
+          taskType: 'simple',
+          dueDate: nextWeekIso,
+          size: 'xs',
+          containerType: 'process',
+          containerId: 'process-1',
+          processId: 'process-1',
+          dependencyState: 'independent',
+          dependencyBlockers: [],
+          canConnect: true,
+        },
+      ],
+      edges: [
+        {
+          id: 'edge-phase-1',
+          predecessorType: 'phase',
+          predecessorId: 'phase-done',
+          successorType: 'phase',
+          successorId: 'phase-open',
+          canRemove: true,
+        },
+        {
+          id: 'edge-task-1',
+          predecessorType: 'task',
+          predecessorId: 'task-overdue',
+          successorType: 'task',
+          successorId: 'task-today',
+          canRemove: true,
+        },
+      ],
+    };
+
+    const api = {
+      request: vi.fn(async (path: string) => {
+        if (path.startsWith('dependencies?')) return graphResponse;
+        return apiResponse(path);
+      }),
+      requestWithClosed: vi.fn(async (path: string, closed: string[]) => {
+        if (path.includes('/phases')) {
+          return { phases: phases.filter(p => p.status !== 'completed' || closed.includes('completed')) };
+        }
+        return { tasks: tasks.filter(t => t.status !== 'archived' || closed.includes('archived')) };
+      }),
+    };
+    const router = { navigate: vi.fn() };
+
+    await TestBed.configureTestingModule({
+      imports: [ProcessViewComponent],
+      providers: [
+        { provide: ApiService, useValue: api },
+        { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ id: 'process-1' })) } },
+        { provide: Router, useValue: router },
+      ],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(ProcessViewComponent);
+    fixture.detectChanges();
+    await fixture.componentInstance.load();
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const tabs = Array.from(el.querySelectorAll('.process-view-tabs button[role="tab"]')) as HTMLButtonElement[];
+    expect(tabs.map(t => t.textContent?.trim())).toEqual(['☷ Lista', '◇ Grafo', '◷ Linha do tempo']);
+    expect(el.querySelector('.process-columns')).toBeTruthy();
+    expect(el.querySelector('app-dependency-graph')).toBeNull();
+    expect(el.querySelector('app-timeline-gantt')).toBeNull();
+
+    tabs[2].click();
+    fixture.detectChanges();
+
+    expect(el.querySelector('.process-columns')).toBeNull();
+    expect(el.querySelector('app-timeline-gantt')).toBeTruthy();
+    expect(el.querySelector('[data-node-key="task:task-overdue"]')).toBeTruthy();
+    expect(el.querySelector('[data-node-key="task:task-today"]')).toBeTruthy();
+    expect(el.querySelector('[data-node-key="task:task-archived"]')).toBeNull();
+    expect(el.querySelector('[data-node-key="phase:phase-done"]')).toBeNull();
+    expect(el.querySelector('[data-edge-id="edge-task-1"]')).toBeTruthy();
+
+    await fixture.componentInstance.toggleClosed('archived', true);
+    fixture.detectChanges();
+    expect(el.querySelector('[data-node-key="task:task-archived"]')).toBeTruthy();
+
+    fixture.componentInstance.temporal.set('overdue');
+    fixture.detectChanges();
+    expect(el.querySelector('[data-node-key="task:task-overdue"]')).toBeTruthy();
+    expect(el.querySelector('[data-node-key="task:task-today"]')).toBeNull();
+    expect(el.querySelector('[data-edge-id="edge-task-1"]')).toBeNull();
+
+    fixture.componentInstance.temporal.set('all');
+    fixture.componentInstance.search.set('Meta diária');
+    fixture.detectChanges();
+    expect(el.querySelector('[data-node-key="task:task-today"]')).toBeTruthy();
+    expect(el.querySelector('[data-node-key="task:task-overdue"]')).toBeNull();
+
+    (el.querySelector('[data-node-key="task:task-today"]') as HTMLButtonElement)?.click();
+    expect(router.navigate).toHaveBeenCalledWith(['/tarefas', 'task-today']);
+
+    await fixture.componentInstance.toggleClosed('archived', false);
     fixture.destroy();
   });
 });
