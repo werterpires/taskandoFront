@@ -7,7 +7,7 @@ npm install
 npm run dev
 ```
 
-O servidor local abre em `http://localhost:4200` e encaminha `/api` e `/mcp` para `http://127.0.0.1:3000`. Antes de entrar com e-mail e senha, inicie a API, o PostgreSQL, aplique as migrations e crie o usuário inicial com a seed descrita no README de `taskando-back`. Novos usuários são criados por alguém autenticado na tela de configurações.
+O servidor local abre em `http://localhost:4200` e encaminha `/api` e `/mcp` para `http://127.0.0.1:3000`. Antes de entrar com e-mail e senha, inicie a API, o PostgreSQL, aplique as migrations e crie o usuário inicial com a seed descrita no README de `taskando-back`. Novos usuários são criados por alguém autenticado na tela de configurações, respeitando a cota de convite único por conta.
 
 ```bash
 npm run build
@@ -55,3 +55,7 @@ A interface cobre tarefas e seus nove tipos, subtarefas, checklist, comentários
 Processos abrem dentro do shell autenticado na rota hash `#/processos/:id`. A página reúne metadados, progresso, fases, tarefas diretas e a projeção completa de dependências, com estados explícitos de carregamento, acesso negado, não encontrado, falha temporária, vazio e somente leitura. Os filtros de concluídos, cancelados e arquivados são enviados à API; busca textual e recortes de prazo refinam localmente o resultado carregado. As demais entidades continuam usando o painel de detalhes existente.
 
 O grafo de dependências é compartilhado entre a página de processo e a visão de fase. Ele separa fases e tarefas diretas em faixas, mostra simultaneamente o status do trabalho e a disponibilidade por dependências e permite criar ou remover ligações conforme as capacidades devolvidas pela API. A interação funciona por ponteiro e teclado, anuncia erros de forma acessível e recarrega a projeção do backend depois de cada mutação.
+
+## Configurações e cota de convite único
+
+`AppComponent` (`src/app/app.component.ts` e `src/app/app.component.html`) armazena o signal `inviteQuota` a partir de `GET /api/auth/me` e `POST /api/auth/login` e o limpa no logout ou em HTTP `401`. Na seção `#/configuracoes`, o painel **Criar usuário** (`data-testid="create-user-panel"`) exibe a cota restante (`remaining de limit`) ou, quando esgotada (`remaining === 0`), oculta o formulário de criação e mostra os dados da pessoa convidada (`displayName`, `email` e `createdAt` formatado via `dateBr`). Após `POST /api/auth/users`, `refreshInviteQuota` atualiza imediatamente a cota via `auth/me`, mantendo um fallback local consistente em caso de falha transitória.

@@ -13,13 +13,26 @@ import { DrawerService } from './shared/drawer.service';
 import { BreadcrumbCrumb, entityBreadcrumbs } from './shared/breadcrumb';
 import { DateBrPipe } from './shared/date-br.pipe';
 
+export type InviteQuotaUser = {
+  id: string;
+  displayName: string;
+  email: string;
+  createdAt: string;
+};
+export type InviteQuota = {
+  limit: number;
+  used: number;
+  remaining: number;
+  invitedUser: InviteQuotaUser | null;
+};
+
 const paths: Record<string, string> = { task: 'tasks', project: 'projects', front: 'fronts', product: 'products', process: 'processes', phase: 'phases', organization: 'organizations', list: 'lists', reminder: 'reminders', series: 'recurrence-series' };
 @Component({ selector: 'app-root', standalone: true, imports: [CommonModule, FormsModule, RouterOutlet, DependencyGraphComponent, DateBrPipe], templateUrl: './app.component.html' })
 export class AppComponent implements OnInit, OnDestroy {
   api = inject(ApiService);
   router = inject(Router);
   drawer = inject(DrawerService);
-  user = signal<Item | null>(null); authenticating = signal(true); loading = signal(false); saving = signal(false);
+  user = signal<Item | null>(null); inviteQuota = signal<InviteQuota | null>(null); authenticating = signal(true); loading = signal(false); saving = signal(false);
   error = signal(''); notice = signal(''); section = signal('Início'); mobile = signal(false);
   loginEmail = ''; loginPassword = '';
   newUserDisplayName = ''; newUserEmail = ''; newUserPassword = '';
@@ -148,7 +161,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.routeSubscription = this.router.events.pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd)).subscribe(() => {
       if (this.user()) void this.applyRoute();
     });
-    try { const data = await this.api.request('auth/me'); this.user.set(data.user); await this.bootstrap(); }
+    try { const data = await this.api.request('auth/me'); this.user.set(data.user); this.inviteQuota.set(data.inviteQuota ?? null); await this.bootstrap(); }
     catch (e) { if (!(e instanceof ApiError && e.status === 401)) this.fail(e); }
     finally { this.authenticating.set(false); }
   }
@@ -176,7 +189,7 @@ export class AppComponent implements OnInit, OnDestroy {
     ]);
     if (version !== this.notificationRequestVersion) return;
     if ([unread, reminders, all].some(result => result.status === 'rejected' && result.reason instanceof ApiError && result.reason.status === 401)) {
-      this.user.set(null); this.ngOnDestroy(); return;
+      this.user.set(null); this.inviteQuota.set(null); this.ngOnDestroy(); return;
     }
     if (!this.user() || version !== this.notificationRequestVersion) return;
     this.notificationsLoading.set(false);
@@ -276,17 +289,47 @@ export class AppComponent implements OnInit, OnDestroy {
   async runNotification(action:()=>Promise<void>) { await this.run(action); if(this.error()) this.notificationsError.set(this.error()); }
   async authenticate() { await this.run(async()=>{
     const data=await this.api.request('auth/login','POST',{email:this.loginEmail,password:this.loginPassword});
-    this.loginPassword='';this.showReadNotifications.set(false);this.unreadNotificationCount.set(0);this.notifications.set([]);this.notificationsError.set('');this.user.set(data.user);await this.bootstrap();
+    this.loginPassword='';this.showReadNotifications.set(false);this.unreadNotificationCount.set(0);this.notifications.set([]);this.notificationsError.set('');this.user.set(data.user);this.inviteQuota.set(data.inviteQuota ?? null);await this.bootstrap();
   }); }
   async createUser() { await this.run(async()=>{
-    await this.api.request('auth/users','POST',{displayName:this.newUserDisplayName,email:this.newUserEmail,password:this.newUserPassword});
+    const created=await this.api.request('auth/users','POST',{displayName:this.newUserDisplayName,email:this.newUserEmail,password:this.newUserPassword});
     this.newUserDisplayName='';this.newUserEmail='';this.newUserPassword='';this.notice.set('Usuário criado. Informe a senha inicial à pessoa.');
+    await this.refreshInviteQuota(created);
   }); }
+  private async refreshInviteQuota(created?: { user?: Item; inviteQuota?: InviteQuota | null }) {
+    if (created?.inviteQuota) {
+      this.inviteQuota.set(created.inviteQuota);
+      return;
+    }
+    try {
+      const me = await this.api.request('auth/me');
+      if (me && 'inviteQuota' in me) {
+        this.inviteQuota.set(me.inviteQuota ?? null);
+        return;
+      }
+    } catch {
+      // Fallback below keeps UI consistent if auth/me fails right after user creation.
+    }
+    if (created?.user) {
+      const limit = this.inviteQuota()?.limit ?? 1;
+      this.inviteQuota.set({
+        limit,
+        used: limit,
+        remaining: 0,
+        invitedUser: {
+          id: created.user.id,
+          displayName: String(created.user['displayName'] ?? ''),
+          email: String(created.user['email'] ?? ''),
+          createdAt: String(created.user['createdAt'] ?? ''),
+        },
+      });
+    }
+  }
   async changePassword() { await this.run(async()=>{
     await this.api.request('auth/password','PATCH',{currentPassword:this.currentPassword,newPassword:this.newPassword});
     this.currentPassword='';this.newPassword='';this.notice.set('Senha alterada.');
   }); }
-  async logout() { await this.run(async()=>{await this.api.request('auth/logout','POST',{});this.user.set(null);this.showReadNotifications.set(false);this.ngOnDestroy();}); }
+  async logout() { await this.run(async()=>{await this.api.request('auth/logout','POST',{});this.user.set(null);this.inviteQuota.set(null);this.showReadNotifications.set(false);this.ngOnDestroy();}); }
   localDate(date:Date) { return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`; }
   title(row:Item) { return row.title ?? row.name ?? ''; }
   parentChainLabel(row:Item) { return (row['parentChain'] ?? []).map((parent:Item) => this.title(parent)).filter(Boolean).join(' → '); }
