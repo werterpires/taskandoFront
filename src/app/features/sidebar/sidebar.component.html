@@ -1,0 +1,35 @@
+@if (mobileOpen()) {
+  <button class="mobile-shade" aria-label="Fechar menu" (click)="closeMobile.emit()"></button>
+}
+<aside class="sidebar" [class.mobile-open]="mobileOpen()">
+  <button class="brand" (click)="navigateTo('Início')"><span class="brand-mark">❧</span> Taskando</button>
+  <button class="workspace" (click)="navigateTo('Estrutura')">
+    <span class="avatar">{{ userInitial() }}</span>
+    <span>Meu espaço<small>Área pessoal</small></span>
+    <span>⌄</span>
+  </button>
+  <p class="nav-label">MEU TRABALHO</p>
+  <nav aria-label="Navegação principal">
+    @for (item of navigation; track item.path) {
+      <button [class.active]="isActive(item)" (click)="navigateTo(item.section)">
+        <span class="nav-icon">{{ item.icon }}</span>{{ item.section }}
+        @if (item.section === 'Minhas tarefas') {
+          <span class="count">{{ openCount() }}</span>
+        }
+      </button>
+    }
+  </nav>
+  <div class="nav-label line">
+    <span>ORGANIZAÇÕES</span>
+    <button aria-label="Nova organização" (click)="createOrganization.emit()">+</button>
+  </div>
+  @for (org of organizations(); track org.id) {
+    <button class="organization-link" (click)="selectOrganization(org)">
+      <span>{{ org['icon'] || '◈' }}</span>{{ org.name }}
+    </button>
+  }
+  <footer class="sidebar-footer">
+    <span>{{ userDisplayName() }}</span>
+    <button (click)="logout.emit()">Sair ↗</button>
+  </footer>
+</aside>

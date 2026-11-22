@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { ApiError, ApiService } from '../api.service';
 import { TaskViewComponent } from './task-view.component';
 import { DrawerService } from '../shared/drawer.service';
+import { ToastService } from '../shared/toast/toast.service';
 
 function taskApiResponse(path: string) {
   if (path === 'tasks/task-1') {
@@ -92,6 +93,9 @@ describe('TaskViewComponent', () => {
 
     expect(fixture.componentInstance.task()?.status).toBe('in_progress');
     expect(drawer.notifyMutation).toHaveBeenCalled();
+    const toast = TestBed.inject(ToastService);
+    expect(toast.toasts().some(t => t.kind === 'success' && t.message === 'Status atualizado.')).toBe(true);
+    toast.clear();
   });
 
   it('navigates back to phase container when parentType is phase', async () => {
@@ -240,7 +244,7 @@ describe('TaskViewComponent', () => {
 
     expect(fixture.componentInstance.checklist().length).toBe(1);
 
-    fixture.componentInstance.newChecklistText = 'Cobrar Bianca';
+    fixture.componentInstance.newChecklistText.set('Cobrar Bianca');
     await fixture.componentInstance.addChecklistItem();
 
     expect(postPayloads).toEqual([{ title: 'Cobrar Bianca' }]);
@@ -295,6 +299,45 @@ describe('TaskViewComponent', () => {
       decision: 'approve',
     });
     expect(fixture.componentInstance.task()?.status).toBe('completed');
+    const toast = TestBed.inject(ToastService);
+    expect(toast.toasts().some(t => t.kind === 'success' && t.message.includes('Tarefa aprovada'))).toBe(true);
+    toast.clear();
+  });
+
+  it('emits error toast on action failure and keeps inline validation inside reject modal', async () => {
+    const api = {
+      request: vi.fn(async (path: string, method?: string) => {
+        if (method === 'PATCH' && path === 'tasks/task-1') {
+          throw new Error('Falha de rede');
+        }
+        return taskApiResponse(path);
+      }),
+      requestWithClosed: vi.fn(async () => ({ subtasks: [] })),
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [TaskViewComponent],
+      providers: [
+        { provide: ApiService, useValue: api },
+        { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ id: 'task-1' })) } },
+        { provide: Router, useValue: { navigate: vi.fn() } },
+      ],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(TaskViewComponent);
+    const toast = TestBed.inject(ToastService);
+    fixture.detectChanges();
+    await fixture.componentInstance.load();
+    fixture.detectChanges();
+
+    await fixture.componentInstance.updateStatus('completed');
+    expect(toast.toasts().some(t => t.kind === 'error' && t.message === 'Falha de rede')).toBe(true);
+    expect((fixture.nativeElement as HTMLElement).querySelector('.task-page > .error')).toBeNull();
+
+    fixture.componentInstance.promptReject();
+    fixture.componentInstance.confirmReject();
+    expect(fixture.componentInstance.actionError()).toContain('Informe o motivo');
+    toast.clear();
   });
 });
 

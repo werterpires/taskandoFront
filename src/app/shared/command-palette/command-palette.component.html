@@ -1,0 +1,109 @@
+@if (isOpen()) {
+  <div
+    class="modal-backdrop command-palette-backdrop"
+    data-testid="command-palette-backdrop"
+    (click)="close()"
+  ></div>
+  <section
+    class="modal command-palette"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Paleta de comandos"
+    data-testid="command-palette"
+    cdkTrapFocus
+    [cdkTrapFocusAutoCapture]="true"
+    (keydown)="onDialogKeydown($event)"
+  >
+    <div class="command-palette-input-row">
+      <span class="command-palette-search-icon" aria-hidden="true">⌕</span>
+      <input
+        #searchInput
+        type="search"
+        class="command-palette-input"
+        aria-label="Buscar itens, seções ou ações rápidas"
+        aria-autocomplete="list"
+        aria-controls="command-palette-listbox"
+        [attr.aria-activedescendant]="flatOptions().length ? 'command-palette-option-' + activeIndex() : null"
+        placeholder="Buscar tarefas, projetos, seções ou ações…"
+        data-testid="command-palette-input"
+        [ngModel]="query()"
+        (ngModelChange)="onQueryChange($event)"
+      >
+      @if (searching()) {
+        <span class="command-palette-status" role="status" data-testid="command-palette-loading">Buscando…</span>
+      }
+      <button
+        type="button"
+        class="command-palette-close"
+        aria-label="Fechar paleta de comandos"
+        data-testid="command-palette-close"
+        (click)="close()"
+      >Esc</button>
+    </div>
+
+    <div
+      id="command-palette-listbox"
+      class="command-palette-list"
+      role="listbox"
+      aria-label="Resultados e comandos"
+    >
+      @if (searchError()) {
+        <p class="error command-palette-error" role="alert" data-testid="command-palette-error">
+          {{ searchError() }}
+        </p>
+      }
+
+      @for (group of groups(); track group.key) {
+        <div class="command-palette-group" [attr.data-group]="group.key">
+          <div class="command-palette-group-title">{{ group.label }}</div>
+          @for (option of group.options; track option.id) {
+            <button
+              type="button"
+              role="option"
+              class="command-palette-option"
+              [id]="'command-palette-option-' + option.index"
+              [class.active]="activeIndex() === option.index"
+              [attr.aria-selected]="activeIndex() === option.index"
+              [attr.data-testid]="'command-palette-option-' + option.id"
+              (mouseenter)="activeIndex.set(option.index)"
+              (click)="executeOption(option)"
+            >
+              @if (option.group === 'results') {
+                <span class="command-palette-badge">{{ option.badge }}</span>
+                <span class="command-palette-option-main">
+                  <strong>{{ option.label }}</strong>
+                  <small>{{ option.subtitle }}</small>
+                </span>
+                @if (option.statusBadge) {
+                  <span class="badge" [attr.data-status]="option.statusRaw">{{ option.statusBadge }}</span>
+                }
+              } @else {
+                <span class="command-palette-icon" aria-hidden="true">{{ option.icon }}</span>
+                <span class="command-palette-option-main">
+                  <strong>{{ option.label }}</strong>
+                  <small>{{ option.subtitle }}</small>
+                </span>
+              }
+            </button>
+          }
+        </div>
+      }
+
+      @if (!searching() && !searchError() && !flatOptions().length) {
+        <div class="command-palette-empty" data-testid="command-palette-empty">
+          Nenhum item, seção ou ação encontrada para "{{ query().trim() }}".
+        </div>
+      } @else if (!searching() && !searchError() && query().trim().length >= 2 && !results().length) {
+        <p class="command-palette-hint muted" data-testid="command-palette-no-results">
+          Nenhum item encontrado na busca global para "{{ query().trim() }}".
+        </p>
+      }
+    </div>
+
+    <footer class="command-palette-footer">
+      <span><kbd>↑</kbd> <kbd>↓</kbd> navegar</span>
+      <span><kbd>Enter</kbd> selecionar</span>
+      <span><kbd>Esc</kbd> fechar</span>
+    </footer>
+  </section>
+}

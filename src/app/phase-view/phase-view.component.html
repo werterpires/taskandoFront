@@ -49,10 +49,6 @@
       </div>
     </section>
 
-    @if (actionError()) {
-      <div class="error" role="alert">{{actionError()}}<button aria-label="Fechar erro" (click)="actionError.set('')">×</button></div>
-    }
-
     @if (progress(); as phaseProgress) {
       <section class="stats process-stats">
         <article><span>Progresso</span><strong>{{phaseProgress.percentage}}%</strong><small>{{phaseProgress.completed}} de {{phaseProgress.total}} itens válidos</small></article>
@@ -82,13 +78,19 @@
       @if (!visibleTasks().length) {
         <div class="empty"><span class="empty-symbol">❧</span><h2>Nenhuma tarefa nesta fase.</h2><p>Ajuste os filtros ou inclua tarefas encerradas para consultar o histórico.</p></div>
       } @else {
-        <div class="item-list">
-          @for (task of visibleTasks(); track task.id) {
-            <button type="button" class="process-item" [attr.aria-label]="'Abrir tarefa ' + task.title" (click)="openTask(task)">
+        <div class="item-list phase-task-list">
+          <cdk-virtual-scroll-viewport class="process-list-viewport" [itemSize]="68">
+            <button
+              type="button"
+              class="process-item"
+              *cdkVirtualFor="let task of visibleTasks(); trackBy: trackById"
+              [attr.aria-label]="'Abrir tarefa ' + task.title"
+              (click)="openTask(task)"
+            >
               <div><strong>{{task.title}}</strong><p>{{task['description'] || (task['dueDate'] | dateBr) || 'Sem descrição ou prazo.'}}</p></div>
               <span class="badge" [attr.data-status]="task['status']">{{statusLabels[task['status']] || task['status']}}</span>
             </button>
-          }
+          </cdk-virtual-scroll-viewport>
         </div>
       }
     </section>

@@ -1,0 +1,27 @@
+<main class="login">
+  <div class="login-card">
+    <span class="brand">❧ Taskando</span>
+    <p class="eyebrow">ESPAÇO PARA O QUE IMPORTA</p>
+    <h1>Organize o trabalho.<br>Abra espaço para fazer.</h1>
+    <p>Tarefas, projetos e pessoas, juntos em um lugar.</p>
+    <form class="auth-form" (ngSubmit)="submit()">
+      <label>E-mail<input name="email" type="email" autocomplete="email" [ngModel]="email()" (ngModelChange)="email.set($event)" maxlength="254" required></label>
+      <label>Senha<input name="password" type="password" autocomplete="current-password" [ngModel]="password()" (ngModelChange)="password.set($event)" minlength="8" maxlength="128" required></label>
+      <button class="primary" [disabled]="saving()">{{ saving() ? 'Aguarde…' : 'Entrar' }}</button>
+    </form>
+    @if (error()) {
+      <p role="alert" class="error">{{ error() }}</p>
+    }
+    <small>Seu espaço pessoal e suas organizações na mesma conta.</small>
+    <nav class="legal-links" aria-label="Documentos legais" data-testid="login-legal-links">
+      <a href="#/termos" (click)="openLegalRoute($event, '/termos')">Termos de Uso</a>
+      <span aria-hidden="true">·</span>
+      <a href="#/privacidade" (click)="openLegalRoute($event, '/privacidade')">Política de Privacidade</a>
+    </nav>
+  </div>
+  <div class="login-art" aria-hidden="true">
+    <span>✓</span>
+    <div>Uma coisa de cada vez.</div>
+    <i>e tudo no seu lugar.</i>
+  </div>
+</main>

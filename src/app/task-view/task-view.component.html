@@ -58,10 +58,6 @@
       </div>
     </section>
 
-    @if (errorMessage()) {
-      <div class="error" role="alert">{{errorMessage()}}<button aria-label="Fechar erro" (click)="errorMessage.set('')">×</button></div>
-    }
-
     <section class="stats process-stats">
       <article>
         <span>Status</span>
@@ -101,8 +97,8 @@
       @if (activeTab() === 'checklist') {
         <div class="detail-section">
           <form class="inline-form" (ngSubmit)="addChecklistItem()">
-            <input name="checklistText" [(ngModel)]="newChecklistText" placeholder="Adicionar item ao checklist…" maxlength="255">
-            <button class="primary" [disabled]="saving() || !newChecklistText.trim()">+ Adicionar</button>
+            <input name="checklistText" [ngModel]="newChecklistText()" (ngModelChange)="newChecklistText.set($event)" placeholder="Adicionar item ao checklist…" maxlength="255">
+            <button class="primary" [disabled]="saving() || !newChecklistText().trim()">+ Adicionar</button>
           </form>
           @for (check of checklist(); track check.id) {
             <div class="check-row">
@@ -122,8 +118,8 @@
       @if (activeTab() === 'subtasks') {
         <div class="detail-section">
           <form class="inline-form" (ngSubmit)="addSubtask()">
-            <input name="subtaskTitle" [(ngModel)]="newSubtaskTitle" placeholder="Título da nova subtarefa…" maxlength="140">
-            <button class="primary" [disabled]="saving() || !newSubtaskTitle.trim()">+ Criar subtarefa</button>
+            <input name="subtaskTitle" [ngModel]="newSubtaskTitle()" (ngModelChange)="newSubtaskTitle.set($event)" placeholder="Título da nova subtarefa…" maxlength="140">
+            <button class="primary" [disabled]="saving() || !newSubtaskTitle().trim()">+ Criar subtarefa</button>
           </form>
           @for (sub of subtasks(); track sub.id) {
             <button type="button" class="process-item" (click)="openSubtask(sub)">
@@ -140,9 +136,9 @@
       @if (activeTab() === 'comments') {
         <div class="detail-section">
           <form (ngSubmit)="addComment()" style="display: grid; gap: 8px; margin-bottom: 16px;">
-            <textarea name="commentText" [(ngModel)]="newCommentText" rows="3" placeholder="Escreva um comentário…"></textarea>
+            <textarea name="commentText" [ngModel]="newCommentText()" (ngModelChange)="newCommentText.set($event)" rows="3" placeholder="Escreva um comentário…"></textarea>
             <div style="display: flex; justify-content: flex-end;">
-              <button class="primary" [disabled]="saving() || !newCommentText.trim()">Enviar comentário</button>
+              <button class="primary" [disabled]="saving() || !newCommentText().trim()">Enviar comentário</button>
             </div>
           </form>
           @for (comm of comments(); track comm.id) {
@@ -182,8 +178,8 @@
             Motivo
             <textarea [ngModel]="rejectReason()" (ngModelChange)="rejectReason.set($event)" name="reason" rows="3" required maxlength="1000" placeholder="Descreva o que precisa ser ajustado…"></textarea>
           </label>
-          @if (errorMessage()) {
-            <p class="error" role="alert">{{errorMessage()}}</p>
+          @if (actionError()) {
+            <p class="error" role="alert">{{actionError()}}</p>
           }
           <div class="actions">
             <button type="button" [disabled]="saving()" (click)="closeRejectModal()">Cancelar</button>

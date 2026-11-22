@@ -1,0 +1,159 @@
+@let row = item();
+<div class="modal-backdrop" (click)="close.emit()"></div>
+<section class="drawer" role="dialog" aria-modal="true" aria-label="Detalhes do item">
+  <header class="drawer-header">
+    <span class="eyebrow">{{labels[row.kind!]||'Detalhes'}}</span>
+    <button aria-label="Fechar detalhes" (click)="close.emit()">×</button>
+  </header>
+  <h2>{{title(row)}}</h2>
+  <p class="entity-path" aria-label="Caminho do item">
+    @for(crumb of breadcrumbs();track $index;let last = $last){
+      @if(crumb.route && !last){
+        <a (click)="navigateCrumb.emit(crumb)" class="crumb-link">{{crumb.label}}</a>
+      }@else{
+        <span [class.crumb-current]="last">{{crumb.label}}</span>
+      }
+      @if(!last){<span class="path-sep">→</span>}
+    }
+  </p>
+  <div class="tabs detail-tabs">
+    @for(t of ['Detalhes','Filhos','Acessos'];track t){
+      <button [class.chosen]="tab()===t" (click)="tabChange.emit(t)">{{t}}</button>
+    }
+    @if(row.kind==='task'){
+      <button [class.chosen]="tab()==='Checklist'" (click)="tabChange.emit('Checklist')">Checklist</button>
+      <button [class.chosen]="tab()==='Comentários'" (click)="tabChange.emit('Comentários')">Comentários</button>
+      <button [class.chosen]="tab()==='Histórico'" (click)="tabChange.emit('Histórico')">Histórico</button>
+    }
+    @if(['process','phase'].includes(row.kind!)){
+      <button [class.chosen]="tab()==='Dependências'" (click)="tabChange.emit('Dependências')">Dependências</button>
+    }
+  </div>
+  @if(error()){<p class="error" role="alert">{{error()}}</p>}
+  @if(tab()==='Detalhes'){
+    <p class="description">{{row['description']||'Sem descrição.'}}</p>
+    <div class="detail-properties">
+      <span>Status</span>
+      <select aria-label="Status" [ngModel]="row['status']" (ngModelChange)="statusChange.emit($event)">
+        @for(s of workStatuses;track s){<option [value]="s">{{statuses[s]}}</option>}
+      </select>
+      <span>Tipo</span><strong>{{types[row['taskType']]||labels[row.kind!]}}</strong>
+      <span>Prazo</span><strong>{{((row['dueDate']||row['dateAt']) | dateBr) || 'Sem prazo'}}</strong>
+      <span>Importância</span><strong>{{levelLabels[row['importance']]||'Não definida'}}</strong>
+      <span>Urgência</span><strong>{{levelLabels[row['urgency']]||'Não definida'}}</strong>
+    </div>
+    @if(detail()['progress']){
+      <label>Progresso: {{detail()['progress'].percentage}}%<progress max="100" [value]="detail()['progress'].percentage"></progress></label>
+    }
+    @if(row['status']==='awaiting_approval'){
+      <button class="primary" (click)="approveDecision.emit('approve')">Aprovar</button>
+      <button (click)="approveDecision.emit('reject')">Devolver para execução</button>
+    }
+    <div class="actions">
+      <button (click)="editItem.emit(row)">Editar</button>
+      @if(row.kind==='task'||row.kind==='reminder'){
+        <button class="danger" (click)="removeItem.emit(row)">Excluir</button>
+      }
+    </div>
+    @if(['task','project','front','product','process','phase'].includes(row.kind!)){
+      <section class="detail-section">
+        <h3>Salvar como template</h3>
+        <label>Nome do template<input [ngModel]="templateName()" (ngModelChange)="templateName.set($event)" [placeholder]="title(row)"></label>
+        <button (click)="submitTemplate()">Capturar estrutura</button>
+      </section>
+    }
+  }
+  @if(tab()==='Filhos'){
+    <div class="actions">
+      <button (click)="createChild.emit({ kind: 'task', parent: row })">+ {{row.kind==='task'?'Subtarefa':'Tarefa'}}</button>
+      @if(row.kind==='project'){<button (click)="createChild.emit({ kind: 'front', parent: row })">+ Frente</button>}
+      @if(row.kind==='process'){<button (click)="createChild.emit({ kind: 'phase', parent: row })">+ Fase</button>}
+    </div>
+    @for(child of children();track child.id){
+      <button class="child-row" (click)="openItem.emit(child)">
+        <span>{{labels[child.kind!]}}</span>
+        <strong>{{title(child)}}</strong>
+        <small>{{statuses[child['status']]}}</small>
+      </button>
+    }
+  }
+  @if(tab()==='Checklist'){
+    <form class="inline-form" (ngSubmit)="submitChecklist()">
+      <input aria-label="Novo item de checklist" name="checklist" [ngModel]="newChecklistText()" (ngModelChange)="newChecklistText.set($event)" required placeholder="Adicionar um pequeno passo…">
+      <button [disabled]="saving()">+</button>
+    </form>
+    @for(check of detail()['items']??detail()['checklist']??[];track check.id){
+      <div class="check-row">
+        <label class="check-label"><input type="checkbox" [checked]="check.completed" (change)="toggleChecklistItem.emit(check)">{{check.title}}</label>
+        <button aria-label="Excluir item de checklist" (click)="deleteChecklistItem.emit(check)">×</button>
+      </div>
+    }
+  }
+  @if(tab()==='Comentários'){
+    <form (ngSubmit)="submitComment()">
+      <label>Seu comentário<textarea name="comment" [ngModel]="newCommentText()" (ngModelChange)="newCommentText.set($event)" required></textarea></label>
+      <button class="primary" [disabled]="saving()">Publicar</button>
+    </form>
+    @for(comment of detail()['comments']??[];track comment.id){
+      <article class="comment">
+        <strong>{{comment.authorName}}</strong>
+        <small>{{comment.createdAt | dateBr:'shortDatetime'}}</small>
+        <p>{{comment.body}}</p>
+        @if(comment.canDelete){<button (click)="deleteComment.emit(comment)">Excluir</button>}
+      </article>
+    }
+  }
+  @if(tab()==='Histórico'){
+    @for(event of detail()['events']??detail()['audit']??[];track event.id){
+      <article class="comment">
+        <strong>{{event.actorName}}</strong>
+        <p>{{event.summary}}</p>
+        <small>{{event.createdAt | dateBr:'shortDatetime'}}</small>
+      </article>
+    }
+  }
+  @if(tab()==='Dependências'){
+    <app-dependency-graph
+      [graph]="detail()['graph'] ?? emptyDependencyGraph"
+      [containerType]="row.kind === 'phase' ? 'phase' : 'process'"
+      [containerId]="row.id"
+      (graphChange)="graphChange.emit($event)"
+    />
+  }
+  @if(tab()==='Acessos'){
+    <h3>Owner</h3>
+    <p>{{detail()['access']?.owner?.displayName}}</p>
+    @for(assignment of detail()['access']?.assignments??[];track assignment.id){
+      <div class="line">
+        <span>{{assignment.displayName}} · {{assignment.role}}</span>
+        @if(detail()['access']?.canManage){<button (click)="revokeAccess.emit(assignment)">Remover</button>}
+      </div>
+    }
+    <p class="muted">Papéis são definidos neste item. Visibilidade dos filhos não concede permissão para editá-los.</p>
+    @if(detail()['access']?.canManage){
+      <form (ngSubmit)="submitInvite()">
+        <label>E-mail<input name="inviteEmail" type="email" [ngModel]="inviteEmail()" (ngModelChange)="inviteEmail.set($event)" required></label>
+        <label>Papel<select name="inviteRole" [ngModel]="inviteRole()" (ngModelChange)="inviteRole.set($event)">
+          @for(role of roles;track role){<option [value]="role">{{role}}</option>}
+        </select></label>
+        <button class="primary">Convidar</button>
+      </form>
+    }
+    @if(detail()['transfer']?.canRequest||detail()['transfer']?.canExceptionRequest){
+      <section class="detail-section">
+        <h3>Transferir responsabilidade</h3>
+        <select aria-label="Novo Owner" [ngModel]="transferTarget()" (ngModelChange)="transferTarget.set($event)">
+          <option value="">Escolha o novo Owner</option>
+          @for(person of detail()['transfer']?.candidates??[];track person.id){<option [value]="person.id">{{person.displayName}}</option>}
+        </select>
+        @if(detail()['transfer']?.canExceptionRequest){
+          <label>Modo<select [ngModel]="transferMode()" (ngModelChange)="transferMode.set($event)">
+            <option value="normal">Solicitar aceite</option>
+            <option value="exception">Transferência pelo Owner superior</option>
+          </select></label>
+        }
+        <button (click)="submitTransfer()">Transferir Owner</button>
+      </section>
+    }
+  }
+</section>

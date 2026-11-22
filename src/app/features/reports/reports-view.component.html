@@ -1,0 +1,62 @@
+<section class="surface reports">
+  <div class="reports-filters">
+    <label>Prazo inicial<input type="date" [ngModel]="reportStart()" (ngModelChange)="reportStart.set($event)"></label>
+    <label>Prazo final<input type="date" [ngModel]="reportEnd()" (ngModelChange)="reportEnd.set($event)"></label>
+    <label>Status
+      <select [ngModel]="reportStatus()" (ngModelChange)="changeReportStatus($event)">
+        <option value="">Todos</option>
+        @for (status of workStatuses; track status) {
+          <option [value]="status">{{ statuses[status] }}</option>
+        }
+      </select>
+    </label>
+    <label>Tipo
+      <select [ngModel]="reportType()" (ngModelChange)="reportType.set($event)">
+        <option value="">Todos</option>
+        @for (type of types | keyvalue; track type.key) {
+          <option [value]="type.key">{{ type.value }}</option>
+        }
+      </select>
+    </label>
+    <label>Importância
+      <select [ngModel]="reportImportance()" (ngModelChange)="reportImportance.set($event)">
+        <option value="">Todas</option>
+        @for (level of levels; track level) {
+          <option [value]="level">{{ levelLabels[level] }}</option>
+        }
+      </select>
+    </label>
+    <label>Urgência
+      <select [ngModel]="reportUrgency()" (ngModelChange)="reportUrgency.set($event)">
+        <option value="">Todas</option>
+        @for (level of levels; track level) {
+          <option [value]="level">{{ levelLabels[level] }}</option>
+        }
+      </select>
+    </label>
+    <div class="actions">
+      <button (click)="clearReport()">Limpar filtros</button>
+      <button class="primary" [disabled]="!reportRows().length" (click)="exportReport()">Exportar CSV</button>
+    </div>
+  </div>
+  <div class="dashboard-metrics report-summary">
+    <article><span>Itens no recorte</span><strong>{{ reportRows().length }}</strong></article>
+    <article><span>Em aberto</span><strong>{{ reportRows().length - reportCompleted() }}</strong></article>
+    <article><span>Concluídos</span><strong>{{ reportCompleted() }}</strong></article>
+  </div>
+  <div class="reports-table">
+    <div class="report-row report-head">
+      <span>Tarefa</span><span>Status</span><span>Tipo</span><span>Prazo</span><span>Prioridade</span><span>Contêiner</span>
+    </div>
+    @for (task of reportRows(); track task.id) {
+      <button class="report-row" (click)="openItem.emit(task)">
+        <strong>{{ task.title }}</strong>
+        <span>{{ statuses[task['status']] }}</span>
+        <span>{{ types[task['taskType']] }}</span>
+        <span>{{ (task['dueDate'] | dateBr) || 'Sem prazo' }}</span>
+        <span>{{ levelLabels[task['importance']] || '—' }} · {{ levelLabels[task['urgency']] || '—' }}</span>
+        <span>{{ task['parentName'] || 'Área pessoal' }}</span>
+      </button>
+    }
+  </div>
+</section>

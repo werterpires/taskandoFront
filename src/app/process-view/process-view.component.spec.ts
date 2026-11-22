@@ -5,6 +5,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { ApiError, ApiService } from '../api.service';
 import { ProcessViewComponent } from './process-view.component';
 import { DrawerService } from '../shared/drawer.service';
+import { ToastService } from '../shared/toast/toast.service';
+import { flushVirtualScroll, scrollVirtualViewport } from '../testing/virtual-scroll.helper';
 
 function apiResponse(path: string) {
   if (path === 'processes/process-1') return { process: { id: 'process-1', title: 'Entrega', status: 'in_progress' } };
@@ -113,7 +115,7 @@ describe('ProcessViewComponent', () => {
     const fixture = TestBed.createComponent(ProcessViewComponent);
     fixture.detectChanges();
     await fixture.componentInstance.load();
-    fixture.detectChanges();
+    await flushVirtualScroll(fixture);
 
     const phaseBtn: HTMLButtonElement | null = fixture.nativeElement.querySelector('button.process-item[aria-label="Abrir fase Fase 1"]');
     expect(phaseBtn).not.toBeNull();
@@ -312,5 +314,105 @@ describe('ProcessViewComponent', () => {
       decision: 'approve',
     });
     expect(fixture.componentInstance.process()?.status).toBe('completed');
+    const toast = TestBed.inject(ToastService);
+    expect(toast.toasts().some(t => t.kind === 'success' && t.message.includes('Processo aprovado'))).toBe(true);
+    toast.clear();
+  });
+
+  it('emits error toast when approval fails and keeps inline validation inside reject modal', async () => {
+    const api = {
+      request: vi.fn(async (path: string, method?: string) => {
+        if (path === 'approvals' && method === 'POST') {
+          throw new Error('Erro na aprovação');
+        }
+        if (path === 'processes/process-1') {
+          return { process: { id: 'process-1', title: 'Entrega', status: 'awaiting_approval' } };
+        }
+        return apiResponse(path);
+      }),
+      requestWithClosed: vi.fn(async () => ({ phases: [], tasks: [] })),
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [ProcessViewComponent],
+      providers: [
+        { provide: ApiService, useValue: api },
+        { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ id: 'process-1' })) } },
+        { provide: Router, useValue: { navigate: vi.fn() } },
+      ],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(ProcessViewComponent);
+    const toast = TestBed.inject(ToastService);
+    fixture.detectChanges();
+    await fixture.componentInstance.load();
+    fixture.detectChanges();
+
+    await fixture.componentInstance.approve('approve');
+    expect(toast.toasts().some(t => t.kind === 'error' && t.message === 'Erro na aprovação')).toBe(true);
+    expect((fixture.nativeElement as HTMLElement).querySelector('.process-page > .error')).toBeNull();
+
+    fixture.componentInstance.promptReject();
+    fixture.componentInstance.confirmReject();
+    expect(fixture.componentInstance.actionError()).toContain('Informe o motivo');
+    toast.clear();
+  });
+
+  it('virtualizes large phase and task lists with bounded viewports and updates rendered slice on scroll and search', async () => {
+    const manyPhases = Array.from({ length: 40 }, (_, i) => ({
+      id: `phase-${i + 1}`,
+      title: `Fase ${String(i + 1).padStart(2, '0')}`,
+      status: 'todo',
+    }));
+    const manyTasks = Array.from({ length: 50 }, (_, i) => ({
+      id: `task-${i + 1}`,
+      title: `Tarefa ${String(i + 1).padStart(2, '0')}`,
+      status: 'in_progress',
+    }));
+    const api = {
+      request: vi.fn(async (path: string) => apiResponse(path)),
+      requestWithClosed: vi.fn(async (path: string) => {
+        if (path === 'processes/process-1/phases') return { phases: manyPhases };
+        if (path === 'task-containers/process/process-1') return { tasks: manyTasks };
+        throw new Error(`Unexpected requestWithClosed: ${path}`);
+      }),
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [ProcessViewComponent],
+      providers: [
+        { provide: ApiService, useValue: api },
+        { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ id: 'process-1' })) } },
+        { provide: Router, useValue: { navigate: vi.fn() } },
+      ],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(ProcessViewComponent);
+    fixture.detectChanges();
+    await fixture.componentInstance.load();
+    const viewports = await flushVirtualScroll(fixture, { height: 340 });
+
+    expect(viewports).toHaveLength(2);
+    const el = fixture.nativeElement as HTMLElement;
+    const columns = el.querySelectorAll('.process-columns > section');
+    const renderedPhases = columns[0].querySelectorAll('button.process-item');
+    const renderedTasks = columns[1].querySelectorAll('button.process-item');
+
+    expect(renderedPhases.length).toBeGreaterThan(0);
+    expect(renderedPhases.length).toBeLessThan(manyPhases.length);
+    expect(renderedTasks.length).toBeGreaterThan(0);
+    expect(renderedTasks.length).toBeLessThan(manyTasks.length);
+    expect(columns[0].textContent).toContain('Fase 01');
+    expect(columns[1].textContent).toContain('Tarefa 01');
+
+    await scrollVirtualViewport(fixture, viewports[1], 68 * 35);
+    expect(columns[1].textContent).toContain('Tarefa 40');
+
+    fixture.componentInstance.search.set('49');
+    await flushVirtualScroll(fixture, { height: 340 });
+    expect(columns[0].querySelector('.process-column-empty')).toBeTruthy();
+    expect(columns[1].querySelectorAll('button.process-item')).toHaveLength(1);
+    expect(columns[1].textContent).toContain('Tarefa 49');
+    fixture.destroy();
   });
 });

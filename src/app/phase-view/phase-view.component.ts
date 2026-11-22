@@ -1,5 +1,6 @@
+import { ScrollingModule } from '@angular/cdk/scrolling';
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
@@ -9,6 +10,8 @@ import { DrawerService } from '../shared/drawer.service';
 import { BreadcrumbCrumb, entityBreadcrumbs } from '../shared/breadcrumb';
 import { DateBrPipe } from '../shared/date-br.pipe';
 import { LegalGateService } from '../legal/legal-gate.service';
+import { ToastService } from '../shared/toast/toast.service';
+import { WorkFilterService } from '../shared/work-filter.service';
 
 type LoadState = 'loading' | 'ready' | 'forbidden' | 'not-found' | 'temporary-error';
 type Progress = { percentage: number; completed: number; total: number; excluded: number; visible: number };
@@ -16,7 +19,8 @@ type Progress = { percentage: number; completed: number; total: number; excluded
 @Component({
   selector: 'app-phase-view',
   standalone: true,
-  imports: [CommonModule, FormsModule, DependencyGraphComponent, DateBrPipe],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [CommonModule, FormsModule, ScrollingModule, DependencyGraphComponent, DateBrPipe],
   templateUrl: './phase-view.component.html',
 })
 export class PhaseViewComponent implements OnInit, OnDestroy {
@@ -25,6 +29,8 @@ export class PhaseViewComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly drawer = inject(DrawerService);
   private readonly legalGate = inject(LegalGateService);
+  private readonly toast = inject(ToastService);
+  private readonly workFilter = inject(WorkFilterService);
   private routeSubscription?: Subscription;
   private requestVersion = 0;
   phaseId = '';
@@ -51,7 +57,7 @@ export class PhaseViewComponent implements OnInit, OnDestroy {
   progress = signal<Progress | null>(null);
   graph = signal<DependencyGraph>({ tasks: [], phases: [], edges: [] });
   tasks = signal<Item[]>([]);
-  includeClosed = signal<ClosedWorkState[]>([]);
+  includeClosed = this.workFilter.includeClosed;
   search = signal('');
   temporal = signal('all');
   saving = signal(false);
@@ -91,6 +97,16 @@ export class PhaseViewComponent implements OnInit, OnDestroy {
       if (recovered > 0) {
         untracked(() => {
           if (this.phaseId) {
+            void this.load();
+          }
+        });
+      }
+    });
+    effect(() => {
+      const tick = this.workFilter.syncTick();
+      if (tick > 0) {
+        untracked(() => {
+          if (this.phaseId && this.state() === 'ready') {
             void this.load();
           }
         });
@@ -190,9 +206,15 @@ export class PhaseViewComponent implements OnInit, OnDestroy {
       if (this.phase()) {
         this.drawer.notifyMutation(this.phase()!, 'approve');
       }
+      this.toast.success(decision === 'approve' ? 'Fase aprovada.' : 'Fase devolvida para execução.');
       await this.load();
     } catch (error) {
-      this.actionError.set(error instanceof Error ? error.message : 'Falha ao processar aprovação.');
+      const message = error instanceof Error ? error.message : 'Falha ao processar aprovação.';
+      if (decision === 'reject') {
+        this.actionError.set(message);
+      } else {
+        this.toast.error(message);
+      }
     } finally {
       this.saving.set(false);
     }
@@ -233,16 +255,15 @@ export class PhaseViewComponent implements OnInit, OnDestroy {
   }
 
   async toggleClosed(state: ClosedWorkState, checked: boolean): Promise<void> {
-    const current = new Set(this.includeClosed());
-    if (checked) current.add(state);
-    else current.delete(state);
-    this.includeClosed.set(closedWorkStates.filter(s => current.has(s)));
+    this.workFilter.setClosedState(state, checked);
     await this.load();
   }
 
   title(item: Item): string {
     return item.title ?? item.name ?? '';
   }
+
+  readonly trackById = (_index: number, item: Item): string => item.id;
 
   private matchesSearch(item: Item, query: string): boolean {
     return `${this.title(item)} ${item['description'] ?? ''}`.toLocaleLowerCase().includes(query);

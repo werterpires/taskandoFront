@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
@@ -8,6 +8,7 @@ import { DrawerService } from '../shared/drawer.service';
 import { BreadcrumbCrumb, entityBreadcrumbs } from '../shared/breadcrumb';
 import { DateBrPipe } from '../shared/date-br.pipe';
 import { LegalGateService } from '../legal/legal-gate.service';
+import { ToastService } from '../shared/toast/toast.service';
 
 type LoadState = 'loading' | 'ready' | 'forbidden' | 'not-found' | 'temporary-error';
 
@@ -35,6 +36,7 @@ export interface AuditEvent {
 @Component({
   selector: 'app-task-view',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, FormsModule, DateBrPipe],
   templateUrl: './task-view.component.html',
 })
@@ -44,6 +46,7 @@ export class TaskViewComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly drawer = inject(DrawerService);
   private readonly legalGate = inject(LegalGateService);
+  private readonly toast = inject(ToastService);
   private routeSubscription?: Subscription;
   private requestVersion = 0;
   taskId = '';
@@ -83,17 +86,28 @@ export class TaskViewComponent implements OnInit, OnDestroy {
   audit = signal<AuditEvent[]>([]);
   activeTab = signal<'checklist' | 'subtasks' | 'comments' | 'audit'>('checklist');
   saving = signal(false);
+  actionError = signal('');
   rejectModalOpen = signal(false);
   rejectReason = signal('');
 
   breadcrumbs = computed(() => entityBreadcrumbs(this.task()));
   navigateCrumb(crumb: BreadcrumbCrumb) { if (crumb.route) void this.router.navigate(crumb.route); }
 
-  newCommentText = '';
-  newChecklistText = '';
-  newSubtaskTitle = '';
+  newCommentText = signal('');
+  newChecklistText = signal('');
+  newSubtaskTitle = signal('');
 
   constructor() {
+    effect(() => {
+      const refresh = this.drawer.refreshNotification?.() ?? 0;
+      if (refresh > 0) {
+        untracked(() => {
+          if (this.taskId && this.state() === 'ready') {
+            void this.load();
+          }
+        });
+      }
+    });
     effect(() => {
       const recovered = this.legalGate.recovered();
       if (recovered > 0) {
@@ -173,8 +187,9 @@ export class TaskViewComponent implements OnInit, OnDestroy {
       const updated = data.task ?? { ...this.task()!, status };
       this.task.set(updated);
       this.drawer.notifyMutation(updated, 'status');
+      this.toast.success('Status atualizado.');
     } catch (error) {
-      this.errorMessage.set(error instanceof Error ? error.message : 'Falha ao atualizar status.');
+      this.toast.error(error instanceof Error ? error.message : 'Falha ao atualizar status.');
     } finally {
       this.saving.set(false);
     }
@@ -183,7 +198,7 @@ export class TaskViewComponent implements OnInit, OnDestroy {
   async approve(decision: 'approve' | 'reject', reason?: string): Promise<void> {
     if (!this.taskId || this.saving()) return;
     this.saving.set(true);
-    this.errorMessage.set('');
+    this.actionError.set('');
     try {
       const payload: { subjectType: string; subjectId: string; decision: string; reason?: string } = {
         subjectType: 'task',
@@ -199,16 +214,22 @@ export class TaskViewComponent implements OnInit, OnDestroy {
       if (this.task()) {
         this.drawer.notifyMutation(this.task()!, 'approve');
       }
+      this.toast.success(decision === 'approve' ? 'Tarefa aprovada.' : 'Tarefa devolvida para execução.');
       await this.load();
     } catch (error) {
-      this.errorMessage.set(error instanceof Error ? error.message : 'Falha ao processar aprovação.');
+      const message = error instanceof Error ? error.message : 'Falha ao processar aprovação.';
+      if (decision === 'reject') {
+        this.actionError.set(message);
+      } else {
+        this.toast.error(message);
+      }
     } finally {
       this.saving.set(false);
     }
   }
 
   promptReject(): void {
-    this.errorMessage.set('');
+    this.actionError.set('');
     this.rejectReason.set('');
     this.rejectModalOpen.set(true);
   }
@@ -222,7 +243,7 @@ export class TaskViewComponent implements OnInit, OnDestroy {
   confirmReject(): void {
     const reason = this.rejectReason().trim();
     if (!reason) {
-      this.errorMessage.set('Informe o motivo da devolução.');
+      this.actionError.set('Informe o motivo da devolução.');
       return;
     }
     void this.approve('reject', reason);
@@ -238,25 +259,27 @@ export class TaskViewComponent implements OnInit, OnDestroy {
       const updated = data.task ?? { ...current, pinnedForToday };
       this.task.set(updated);
       this.drawer.notifyMutation(updated, 'pin');
+      this.toast.info(pinnedForToday ? 'Tarefa fixada para hoje.' : 'Tarefa desafixada de hoje.');
     } catch (error) {
-      this.errorMessage.set(error instanceof Error ? error.message : 'Falha ao fixar tarefa.');
+      this.toast.error(error instanceof Error ? error.message : 'Falha ao fixar tarefa.');
     } finally {
       this.saving.set(false);
     }
   }
 
   async addChecklistItem(): Promise<void> {
-    const title = this.newChecklistText.trim();
+    const title = this.newChecklistText().trim();
     if (!title || this.saving()) return;
     this.saving.set(true);
     try {
       await this.api.request(`tasks/${this.taskId}/checklist`, 'POST', { title });
-      this.newChecklistText = '';
+      this.newChecklistText.set('');
       const refreshed = await this.api.request(`tasks/${this.taskId}/checklist`);
       this.checklist.set(refreshed.items ?? refreshed.checklist ?? []);
       this.drawer.notifyMutation(this.task() ?? undefined, 'checklist');
+      this.toast.success('Item adicionado ao checklist.');
     } catch (error) {
-      this.errorMessage.set(error instanceof Error ? error.message : 'Falha ao adicionar item.');
+      this.toast.error(error instanceof Error ? error.message : 'Falha ao adicionar item.');
     } finally {
       this.saving.set(false);
     }
@@ -272,7 +295,7 @@ export class TaskViewComponent implements OnInit, OnDestroy {
       );
       this.drawer.notifyMutation(this.task() ?? undefined, 'checklist');
     } catch (error) {
-      this.errorMessage.set(error instanceof Error ? error.message : 'Falha ao atualizar item.');
+      this.toast.error(error instanceof Error ? error.message : 'Falha ao atualizar item.');
     } finally {
       this.saving.set(false);
     }
@@ -285,42 +308,45 @@ export class TaskViewComponent implements OnInit, OnDestroy {
       await this.api.request(`tasks/${this.taskId}/checklist/${item.id}`, 'DELETE');
       this.checklist.update(list => list.filter(i => i.id !== item.id));
       this.drawer.notifyMutation(this.task() ?? undefined, 'checklist');
+      this.toast.info('Item removido do checklist.');
     } catch (error) {
-      this.errorMessage.set(error instanceof Error ? error.message : 'Falha ao remover item.');
+      this.toast.error(error instanceof Error ? error.message : 'Falha ao remover item.');
     } finally {
       this.saving.set(false);
     }
   }
 
   async addComment(): Promise<void> {
-    const body = this.newCommentText.trim();
+    const body = this.newCommentText().trim();
     if (!body || this.saving()) return;
     this.saving.set(true);
     try {
       await this.api.request(`tasks/${this.taskId}/comments`, 'POST', { body });
-      this.newCommentText = '';
+      this.newCommentText.set('');
       const refreshed = await this.api.request(`tasks/${this.taskId}/comments`);
       this.comments.set(refreshed.comments ?? []);
       this.drawer.notifyMutation(this.task() ?? undefined, 'comment');
+      this.toast.success('Comentário publicado.');
     } catch (error) {
-      this.errorMessage.set(error instanceof Error ? error.message : 'Falha ao enviar comentário.');
+      this.toast.error(error instanceof Error ? error.message : 'Falha ao enviar comentário.');
     } finally {
       this.saving.set(false);
     }
   }
 
   async addSubtask(): Promise<void> {
-    const title = this.newSubtaskTitle.trim();
+    const title = this.newSubtaskTitle().trim();
     if (!title || this.saving()) return;
     this.saving.set(true);
     try {
       await this.api.request(`tasks/${this.taskId}/subtasks`, 'POST', { title, taskType: 'simple' });
-      this.newSubtaskTitle = '';
+      this.newSubtaskTitle.set('');
       const refreshed = await this.api.requestWithClosed(`tasks/${this.taskId}/subtasks`, ['completed', 'cancelled', 'archived']);
       this.subtasks.set(refreshed.subtasks ?? []);
       this.drawer.notifyMutation(this.task() ?? undefined, 'subtask');
+      this.toast.success('Subtarefa criada.');
     } catch (error) {
-      this.errorMessage.set(error instanceof Error ? error.message : 'Falha ao criar subtarefa.');
+      this.toast.error(error instanceof Error ? error.message : 'Falha ao criar subtarefa.');
     } finally {
       this.saving.set(false);
     }

@@ -1,0 +1,29 @@
+<section class="dashboard">
+  <div class="dashboard-metrics">
+    <article><span>Atrasados</span><strong>{{ dashboard().overdue }}</strong><small>Tarefas abertas com prazo anterior a hoje.</small></article>
+    <article><span>Bloqueados</span><strong>{{ dashboard().blocked }}</strong><small>Itens impedidos por dependências.</small></article>
+    <article><span>Aguardando aprovação</span><strong>{{ dashboard().approval }}</strong><small>Itens que aguardam uma decisão.</small></article>
+    <article><span>Próximos prazos</span><strong>{{ dashboard().upcoming.length }}</strong><small>Prazos nos próximos sete dias.</small></article>
+  </div>
+  <article class="panel dashboard-progress">
+    <div>
+      <p class="eyebrow">PROGRESSO</p>
+      <h2>{{ dashboard().progress }}% concluído</h2>
+      <p>{{ dashboard().completed }} de {{ dashboard().total }} itens no escopo acessível.</p>
+    </div>
+    <progress max="100" [value]="dashboard().progress"></progress>
+  </article>
+  <article class="panel">
+    <h2>Agenda curta</h2>
+    @for (task of dashboard().upcoming; track task.id) {
+      <button class="child-row" (click)="openItem.emit(task)">
+        <strong>{{ task.title }}</strong>
+        <span>{{ task['dueDate'] | dateBr:'short' }}</span>
+        <small>{{ statuses[task['status']] }}</small>
+      </button>
+    }
+    @if (!dashboard().upcoming.length) {
+      <p class="muted">Nenhum prazo nos próximos sete dias.</p>
+    }
+  </article>
+</section>

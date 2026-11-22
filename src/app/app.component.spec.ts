@@ -5,6 +5,9 @@ import { describe, expect, it, vi } from 'vitest';
 import { ApiError, ApiService, Item } from './api.service';
 import { AppComponent } from './app.component';
 import { DrawerService } from './shared/drawer.service';
+import { ItemEditorService } from './shared/item-editor-modal/item-editor.service';
+import { ToastService } from './shared/toast/toast.service';
+import { WorkFilterService } from './shared/work-filter.service';
 
 describe('AppComponent routing', () => {
   it('boots My Tasks directly with one task listing request', async () => {
@@ -368,6 +371,11 @@ describe('AppComponent inviteQuota in Settings', () => {
     expect(panel?.textContent).toContain('Maria Convidada');
     expect(panel?.textContent).toContain('maria@example.test');
     expect(panel?.textContent).toContain('0 de 1');
+
+    const toastContainer = (fixture.nativeElement as HTMLElement).querySelector('app-toast-container');
+    expect(toastContainer?.textContent).toContain('Usuário criado. Informe a senha inicial à pessoa.');
+    expect((fixture.nativeElement as HTMLElement).querySelector('.page > .notice')).toBeNull();
+    TestBed.inject(ToastService).clear();
     fixture.destroy();
   });
 
@@ -671,5 +679,263 @@ describe('AppComponent legal routes, blocking gate, and 428 recovery', () => {
     fixture.destroy();
   });
 });
+
+describe('AppComponent global ItemEditorModal integration', () => {
+  async function flushMicrotasks() {
+    await new Promise(resolve => setTimeout(resolve, 0));
+  }
+
+  function createShellContext(initialUrl = '/minhas-tarefas') {
+    const events = new Subject<unknown>();
+    let url = initialUrl;
+    const router = {
+      events,
+      get url() { return url; },
+      parseUrl: vi.fn(() => ({ root: { children: { primary: { segments: url.split('/').filter(Boolean).map(path => ({ path })) } } } })),
+      navigate: vi.fn(async (commands: string[]) => {
+        url = commands[0].startsWith('/') ? commands.join('/') : `/${commands.join('/')}`;
+        events.next(new NavigationEnd(1, url, url));
+        return true;
+      }),
+    };
+    const createdTasks: Item[] = [];
+    const api = {
+      request: vi.fn(async (path: string, method = 'GET', body?: Record<string, any>) => {
+        if (path === 'auth/me') return { user: { id: 'u-1', displayName: 'Pessoa', email: 'pessoa@example.test' } };
+        if (path === 'organizations') return { organizations: [], invitations: [] };
+        if (path === 'lists') return { lists: [] };
+        if (path === 'tasks' && method === 'GET') return { tasks: [...createdTasks] };
+        if (path === 'tasks' && method === 'POST') {
+          const task: Item = { id: 'task-new-1', kind: 'task', title: body?.['title'] ?? 'Nova', status: 'todo' };
+          createdTasks.push(task);
+          return { task };
+        }
+        if (path === 'reminders' && method === 'POST') {
+          return { reminder: { id: 'rem-1', kind: 'reminder', title: body?.['title'] ?? 'Lembrete' } };
+        }
+        if (path === 'notifications?unreadOnly=1') return { unreadCount: 0, notifications: [] };
+        if (path === 'reminders/due') return { reminders: [] };
+        throw new Error(`Unexpected request: ${method} ${path}`);
+      }),
+      requestWithClosed: vi.fn(async (path: string) => {
+        if (path === 'tasks') return { tasks: [...createdTasks] };
+        throw new Error(`Unexpected requestWithClosed: ${path}`);
+      }),
+    };
+    return { api, router };
+  }
+
+  it('delegates newItem() and edit() to ItemEditorService and reloads tasks on save', async () => {
+    const { api, router } = createShellContext('/minhas-tarefas');
+    await TestBed.configureTestingModule({
+      imports: [AppComponent],
+      providers: [{ provide: ApiService, useValue: api }, { provide: Router, useValue: router }],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(AppComponent);
+    const component = fixture.componentInstance;
+    const itemEditor = TestBed.inject(ItemEditorService);
+    const toast = TestBed.inject(ToastService);
+
+    await component.ngOnInit();
+    fixture.detectChanges();
+
+    component.newItem('task');
+    fixture.detectChanges();
+
+    expect(itemEditor.isOpen()).toBe(true);
+    expect(itemEditor.kind()).toBe('task');
+    const modal = (fixture.nativeElement as HTMLElement).querySelector('[data-testid="item-editor-modal"]');
+    expect(modal).toBeTruthy();
+
+    itemEditor.setField('title', 'Tarefa via shell');
+    fixture.detectChanges();
+
+    const form = modal!.querySelector('form') as HTMLFormElement;
+    form.dispatchEvent(new Event('submit'));
+    await flushMicrotasks();
+    await flushMicrotasks();
+    fixture.detectChanges();
+
+    expect(itemEditor.isOpen()).toBe(false);
+    expect(component.tasks().some(t => t.title === 'Tarefa via shell')).toBe(true);
+
+    component.edit({ id: 'task-new-1', kind: 'task', title: 'Tarefa via shell', taskType: 'simple' });
+    fixture.detectChanges();
+    expect(itemEditor.isOpen()).toBe(true);
+    expect(itemEditor.itemId()).toBe('task-new-1');
+
+    itemEditor.close();
+    toast.clear();
+    fixture.destroy();
+  });
+
+  it('mounts ItemEditorModalComponent at shell root even on standalone views (/processos/:id, /fases/:id, /tarefas/:id)', async () => {
+    const { api, router } = createShellContext('/processos/proc-1');
+    await TestBed.configureTestingModule({
+      imports: [AppComponent],
+      providers: [{ provide: ApiService, useValue: api }, { provide: Router, useValue: router }],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(AppComponent);
+    const component = fixture.componentInstance;
+    const itemEditor = TestBed.inject(ItemEditorService);
+    const drawer = TestBed.inject(DrawerService);
+    const toast = TestBed.inject(ToastService);
+
+    await component.ngOnInit();
+    fixture.detectChanges();
+    expect(component.isStandaloneRoute()).toBe(true);
+
+    itemEditor.openCreate('reminder');
+    itemEditor.setField('title', 'Lembrete em rota standalone');
+    itemEditor.setField('remindAt', '2026-12-10T09:00');
+    fixture.detectChanges();
+
+    const modal = (fixture.nativeElement as HTMLElement).querySelector('[data-testid="item-editor-modal"]');
+    expect(modal).toBeTruthy();
+
+    const initialRefresh = drawer.refreshNotification();
+    const form = modal!.querySelector('form') as HTMLFormElement;
+    form.dispatchEvent(new Event('submit'));
+    await flushMicrotasks();
+    await flushMicrotasks();
+    fixture.detectChanges();
+
+    expect(itemEditor.isOpen()).toBe(false);
+    expect(drawer.refreshNotification()).toBe(initialRefresh + 1);
+    expect(toast.toasts().some(t => t.kind === 'success' && t.message === 'Salvo.')).toBe(true);
+
+    toast.clear();
+    fixture.destroy();
+  });
+});
+
+describe('AppComponent global CommandPalette integration', () => {
+  async function flushMicrotasks() {
+    await new Promise(resolve => setTimeout(resolve, 0));
+  }
+
+  function createPaletteContext(options?: { authenticated?: boolean; pendingLegal?: boolean }) {
+    const events = new Subject<unknown>();
+    let url = '/minhas-tarefas';
+    const router = {
+      events,
+      get url() { return url; },
+      parseUrl: vi.fn(() => ({ root: { children: { primary: { segments: url.split('/').filter(Boolean).map(path => ({ path })) } } } })),
+      navigate: vi.fn(async (commands: string[]) => {
+        url = commands[0].startsWith('/') ? commands.join('/') : `/${commands.join('/')}`;
+        events.next(new NavigationEnd(1, url, url));
+        return true;
+      }),
+    };
+    const api = {
+      request: vi.fn(async (path: string) => {
+        if (path === 'auth/me') {
+          if (options?.authenticated === false) throw new ApiError(401, { error: 'Não autenticado.' });
+          return {
+            user: { id: 'u-1', displayName: 'Pessoa', email: 'pessoa@example.test' },
+            ...(options?.pendingLegal
+              ? { legalStatus: { requiresAcceptance: true, pendingDocuments: ['terms'] } }
+              : {}),
+          };
+        }
+        if (path === 'legal/documents') return { documents: [] };
+        if (path === 'organizations') return { organizations: [], invitations: [] };
+        if (path === 'lists') return { lists: [] };
+        if (path === 'notifications?unreadOnly=1') return { unreadCount: 0, notifications: [] };
+        if (path === 'reminders/due') return { reminders: [] };
+        throw new Error(`Unexpected request: ${path}`);
+      }),
+      requestWithClosed: vi.fn(async (path: string, states: readonly string[]) => {
+        if (path === 'tasks') {
+          return {
+            tasks: states.includes('completed')
+              ? [
+                  { id: 't-1', title: 'Aberta', status: 'todo' },
+                  { id: 't-2', title: 'Feita', status: 'completed' },
+                ]
+              : [{ id: 't-1', title: 'Aberta', status: 'todo' }],
+          };
+        }
+        throw new Error(`Unexpected requestWithClosed: ${path}`);
+      }),
+    };
+    return { api, router };
+  }
+
+  it('opens with Ctrl+K when authenticated and syncs Alternar Concluídos with AppComponent filters', async () => {
+    const { api, router } = createPaletteContext();
+    await TestBed.configureTestingModule({
+      imports: [AppComponent],
+      providers: [{ provide: ApiService, useValue: api }, { provide: Router, useValue: router }],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(AppComponent);
+    const component = fixture.componentInstance;
+    const workFilter = TestBed.inject(WorkFilterService);
+    const toast = TestBed.inject(ToastService);
+
+    await component.ngOnInit();
+    fixture.detectChanges();
+    expect(component.includeClosed()).toEqual([]);
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, cancelable: true }));
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('[data-testid="command-palette"]')).toBeTruthy();
+
+    const toggleBtn = el.querySelector('[data-testid="command-palette-option-action:toggle-completed"]') as HTMLButtonElement;
+    expect(toggleBtn).toBeTruthy();
+    toggleBtn.click();
+    await flushMicrotasks();
+    fixture.detectChanges();
+
+    expect(workFilter.showCompleted()).toBe(true);
+    expect(component.includeClosed()).toEqual(['completed']);
+    expect(api.requestWithClosed).toHaveBeenLastCalledWith('tasks', ['completed']);
+    expect(component.tasks().some(t => t.id === 't-2')).toBe(true);
+
+    toast.clear();
+    fixture.destroy();
+  });
+
+  it('does not open CommandPalette when unauthenticated or blocked by legal acceptance gate', async () => {
+    const unauth = createPaletteContext({ authenticated: false });
+    await TestBed.configureTestingModule({
+      imports: [AppComponent],
+      providers: [{ provide: ApiService, useValue: unauth.api }, { provide: Router, useValue: unauth.router }],
+    }).compileComponents();
+
+    const unauthFixture = TestBed.createComponent(AppComponent);
+    await unauthFixture.componentInstance.ngOnInit();
+    unauthFixture.detectChanges();
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, cancelable: true }));
+    unauthFixture.detectChanges();
+    expect((unauthFixture.nativeElement as HTMLElement).querySelector('[data-testid="command-palette"]')).toBeNull();
+    unauthFixture.destroy();
+
+    TestBed.resetTestingModule();
+
+    const gated = createPaletteContext({ authenticated: true, pendingLegal: true });
+    await TestBed.configureTestingModule({
+      imports: [AppComponent],
+      providers: [{ provide: ApiService, useValue: gated.api }, { provide: Router, useValue: gated.router }],
+    }).compileComponents();
+
+    const gatedFixture = TestBed.createComponent(AppComponent);
+    await gatedFixture.componentInstance.ngOnInit();
+    gatedFixture.detectChanges();
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, cancelable: true }));
+    gatedFixture.detectChanges();
+    expect((gatedFixture.nativeElement as HTMLElement).querySelector('[data-testid="command-palette"]')).toBeNull();
+    gatedFixture.destroy();
+  });
+});
+
+
 
 

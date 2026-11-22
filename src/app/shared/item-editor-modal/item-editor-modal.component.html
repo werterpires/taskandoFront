@@ -1,0 +1,330 @@
+@if (isOpen()) {
+  <div class="modal-backdrop editor-backdrop" data-testid="item-editor-backdrop"></div>
+  <section
+    class="editor modal"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Editor de item"
+    data-testid="item-editor-modal"
+    cdkTrapFocus
+    [cdkTrapFocusAutoCapture]="true"
+    (keydown.escape)="close()"
+  >
+    <header class="line">
+      <h2>{{ itemId() ? 'Editar' : 'Criar' }} {{ labels[kind()] }}</h2>
+      <button type="button" aria-label="Fechar editor" [disabled]="saving()" (click)="close()">×</button>
+    </header>
+    <form (ngSubmit)="save()">
+      <label>
+        {{ ['organization', 'department', 'team', 'list'].includes(kind()) ? 'Nome' : 'Título' }}
+        <input
+          autofocus
+          name="title"
+          [ngModel]="draft()['title']"
+          (ngModelChange)="editor.setField('title', $event)"
+          required
+          maxlength="140"
+          [placeholder]="draft()['name'] || 'O que vamos organizar?'"
+        >
+      </label>
+      <label>
+        Descrição
+        <textarea
+          name="description"
+          [ngModel]="draft()['description']"
+          (ngModelChange)="editor.setField('description', $event)"
+          rows="3"
+        ></textarea>
+      </label>
+
+      @if (kind() === 'task') {
+        <label>
+          Tipo
+          <select
+            name="taskType"
+            [ngModel]="draft()['taskType']"
+            (ngModelChange)="editor.setField('taskType', $event)"
+            [disabled]="!!itemId()"
+          >
+            @for (type of types | keyvalue; track type.key) {
+              <option [value]="type.key">{{ type.value }}</option>
+            }
+          </select>
+        </label>
+        <div class="form-grid">
+          @if (draft()['taskType'] !== 'cyclic') {
+            <label>
+              Prazo
+              <input
+                type="date"
+                name="dueDate"
+                [ngModel]="draft()['dueDate']"
+                (ngModelChange)="editor.setField('dueDate', $event)"
+              >
+            </label>
+          } @else {
+            <p class="cyclic-due-note">O prazo é automático após a liberação.</p>
+          }
+          @if (draft()['taskType'] === 'date') {
+            <label>
+              Data do marco
+              <input
+                type="date"
+                name="dateAt"
+                [ngModel]="draft()['dateAt']"
+                (ngModelChange)="editor.setField('dateAt', $event)"
+                required
+              >
+            </label>
+          }
+          @if (['commitment', 'event'].includes(draft()['taskType'])) {
+            <label>
+              Início
+              <input
+                type="datetime-local"
+                name="startAt"
+                [ngModel]="draft()['startAt']"
+                (ngModelChange)="editor.setField('startAt', $event)"
+                required
+              >
+            </label>
+          }
+          @if (draft()['taskType'] === 'event') {
+            <label>
+              Término
+              <input
+                type="datetime-local"
+                name="endAt"
+                [ngModel]="draft()['endAt']"
+                (ngModelChange)="editor.setField('endAt', $event)"
+                required
+              >
+            </label>
+          }
+          @if (['commitment', 'scheduled'].includes(draft()['taskType'])) {
+            <label>
+              Duração (minutos)
+              <input
+                type="number"
+                min="1"
+                name="durationMinutes"
+                [ngModel]="draft()['durationMinutes']"
+                (ngModelChange)="editor.setField('durationMinutes', $event)"
+                required
+              >
+            </label>
+          }
+          @if (draft()['taskType'] === 'cyclic') {
+            <label>
+              Relevância
+              <input
+                type="number"
+                min="1"
+                max="5"
+                name="relevance"
+                [ngModel]="draft()['relevance']"
+                (ngModelChange)="editor.setField('relevance', $event)"
+              >
+            </label>
+          }
+        </div>
+        <label>
+          Tags (separadas por vírgula)
+          <input
+            name="tags"
+            [ngModel]="draft()['tags']"
+            (ngModelChange)="editor.setField('tags', $event)"
+          >
+        </label>
+        @if (['recurring', 'scheduled', 'periodic'].includes(draft()['taskType']) && !itemId()) {
+          <fieldset>
+            <legend>Repetição</legend>
+            <div class="form-grid">
+              <label>
+                Frequência
+                <select
+                  name="cadence"
+                  [ngModel]="draft()['cadence']"
+                  (ngModelChange)="editor.setField('cadence', $event)"
+                >
+                  <option value="day">Diária</option>
+                  <option value="week">Semanal</option>
+                  <option value="month">Mensal</option>
+                  <option value="year">Anual</option>
+                </select>
+              </label>
+              <label>
+                Intervalo
+                <input
+                  type="number"
+                  name="interval"
+                  min="1"
+                  [ngModel]="draft()['interval']"
+                  (ngModelChange)="editor.setField('interval', $event)"
+                >
+              </label>
+              <label>
+                Início da série
+                <input
+                  type="date"
+                  name="seriesStart"
+                  [ngModel]="draft()['startDate']"
+                  (ngModelChange)="editor.setField('startDate', $event)"
+                  required
+                >
+              </label>
+              <label>
+                Fim (opcional)
+                <input
+                  type="date"
+                  name="seriesEnd"
+                  [ngModel]="draft()['endDate']"
+                  (ngModelChange)="editor.setField('endDate', $event)"
+                >
+              </label>
+              <label>
+                Horário
+                <input
+                  type="time"
+                  name="time"
+                  [ngModel]="draft()['time']"
+                  (ngModelChange)="editor.setField('time', $event)"
+                >
+              </label>
+              <label>
+                Fuso horário
+                <input
+                  name="timezone"
+                  [ngModel]="draft()['timeZone']"
+                  (ngModelChange)="editor.setField('timeZone', $event)"
+                >
+              </label>
+            </div>
+            <label>
+              Dias / posições (separados por vírgula)
+              <input
+                name="slots"
+                [ngModel]="draft()['periodSlots']"
+                (ngModelChange)="editor.setField('periodSlots', $event)"
+              >
+            </label>
+            <small>Semana: 1 = segunda, 7 = domingo. Mês: dia do mês. Ano: MM-DD.</small>
+            @if (draft()['taskType'] === 'periodic') {
+              <label>
+                Vezes por período
+                <input
+                  type="number"
+                  min="1"
+                  name="occurrences"
+                  [ngModel]="draft()['occurrencesPerPeriod']"
+                  (ngModelChange)="editor.setField('occurrencesPerPeriod', $event)"
+                >
+              </label>
+            }
+          </fieldset>
+        }
+      }
+
+      @if (['task', 'project', 'front', 'product', 'process', 'phase'].includes(kind())) {
+        <div class="form-grid">
+          <label>
+            Tamanho
+            <select
+              name="size"
+              [ngModel]="draft()['size']"
+              (ngModelChange)="editor.setField('size', $event)"
+            >
+              <option [ngValue]="null">Não definido</option>
+              @for (size of ['xs', 's', 'm', 'l', 'xl']; track size; let i = $index) {
+                <option [value]="size">{{ sizeOptionLabel(i) }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            Importância
+            <select
+              name="importance"
+              [ngModel]="draft()['importance']"
+              (ngModelChange)="editor.setField('importance', $event)"
+            >
+              <option [ngValue]="null">Não definida</option>
+              @for (level of levels; track level) {
+                <option [value]="level">{{ levelLabels[level] }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            Urgência
+            <select
+              name="urgency"
+              [ngModel]="draft()['urgency']"
+              (ngModelChange)="editor.setField('urgency', $event)"
+            >
+              <option [ngValue]="null">Não definida</option>
+              @for (level of levels; track level) {
+                <option [value]="level">{{ levelLabels[level] }}</option>
+              }
+            </select>
+          </label>
+        </div>
+        <label class="check-label">
+          <input
+            type="checkbox"
+            name="approval"
+            [ngModel]="draft()['approvalRequired']"
+            (ngModelChange)="editor.setField('approvalRequired', $event)"
+          >
+          Exigir aprovação antes de concluir
+        </label>
+      }
+
+      @if (kind() === 'process') {
+        <label class="check-label">
+          <input
+            type="checkbox"
+            name="autoComplete"
+            [ngModel]="draft()['autoCompleteWhenChildrenDone']"
+            (ngModelChange)="editor.setField('autoCompleteWhenChildrenDone', $event)"
+          >
+          Concluir quando todos os filhos terminarem, respeitando a aprovação
+        </label>
+      }
+
+      @if (kind() === 'product') {
+        <label>
+          Características (uma por linha: chave: valor)
+          <textarea
+            name="characteristics"
+            [ngModel]="characteristics()"
+            (ngModelChange)="editor.characteristics.set($event)"
+            placeholder="Formato: PDF"
+          ></textarea>
+        </label>
+      }
+
+      @if (kind() === 'reminder') {
+        <label>
+          Quando lembrar
+          <input
+            type="datetime-local"
+            name="remindAt"
+            [ngModel]="draft()['remindAt']"
+            (ngModelChange)="editor.setField('remindAt', $event)"
+            required
+          >
+        </label>
+      }
+
+      @if (error()) {
+        <p class="error" role="alert">{{ error() }}</p>
+      }
+
+      <footer class="form-footer">
+        <button type="button" [disabled]="saving()" (click)="close()">Cancelar</button>
+        <button type="submit" class="primary" [disabled]="saving()">
+          {{ saving() ? 'Salvando…' : 'Salvar' }}
+        </button>
+      </footer>
+    </form>
+  </section>
+}

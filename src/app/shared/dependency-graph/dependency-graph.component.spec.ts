@@ -220,4 +220,19 @@ describe('DependencyGraphComponent', () => {
     expect(fixture.componentInstance.viewportWidth()).toBe(912);
     expect(fixture.componentInstance.layout().width).toBeGreaterThanOrEqual(912);
   });
+
+  it('updates viewportWidth inside zone.run when using the window resize fallback under OnPush', async () => {
+    vi.stubGlobal('ResizeObserver', undefined);
+    const api = { request: vi.fn() };
+    const fixture = await createFixture(api, graph([node('single')]));
+    const viewport = fixture.nativeElement.querySelector('.graph-viewport') as HTMLElement;
+    Object.defineProperty(viewport, 'clientWidth', { configurable: true, value: 845 });
+
+    window.dispatchEvent(new Event('resize'));
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.viewportWidth()).toBe(845);
+    expect(fixture.componentInstance.layout().width).toBeGreaterThanOrEqual(845);
+    fixture.destroy();
+  });
 });

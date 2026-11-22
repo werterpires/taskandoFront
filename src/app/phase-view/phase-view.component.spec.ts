@@ -4,6 +4,8 @@ import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 import { ApiError, ApiService } from '../api.service';
 import { PhaseViewComponent } from './phase-view.component';
+import { ToastService } from '../shared/toast/toast.service';
+import { flushVirtualScroll, scrollVirtualViewport } from '../testing/virtual-scroll.helper';
 
 function phaseApiResponse(path: string) {
   if (path === 'phases/phase-1') return { phase: { id: 'phase-1', title: 'Fase Beta', status: 'in_progress', processId: 'process-9' } };
@@ -210,6 +212,9 @@ describe('PhaseViewComponent', () => {
       decision: 'approve',
     });
     expect(fixture.componentInstance.phase()?.status).toBe('completed');
+    const toast = TestBed.inject(ToastService);
+    expect(toast.toasts().some(t => t.kind === 'success' && t.message.includes('Fase aprovada'))).toBe(true);
+    toast.clear();
   });
 
   it('opens reject modal and confirms rejection with reason', async () => {
@@ -257,5 +262,53 @@ describe('PhaseViewComponent', () => {
       reason: 'Necessário ajustar cobertura.',
     });
     expect(fixture.componentInstance.rejectModalOpen()).toBe(false);
+  });
+
+  it('virtualizes phase task list, navigates on virtualized item click, and updates on scroll and search', async () => {
+    const manyTasks = Array.from({ length: 45 }, (_, i) => ({
+      id: `task-${i + 1}`,
+      title: `Atividade ${String(i + 1).padStart(2, '0')}`,
+      status: i % 2 === 0 ? 'todo' : 'in_progress',
+    }));
+    const api = {
+      request: vi.fn(async (path: string) => phaseApiResponse(path)),
+      requestWithClosed: vi.fn(async () => ({ tasks: manyTasks })),
+    };
+    const router = { navigate: vi.fn() };
+
+    await TestBed.configureTestingModule({
+      imports: [PhaseViewComponent],
+      providers: [
+        { provide: ApiService, useValue: api },
+        { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ id: 'phase-1' })) } },
+        { provide: Router, useValue: router },
+      ],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(PhaseViewComponent);
+    fixture.detectChanges();
+    await fixture.componentInstance.load();
+    const viewports = await flushVirtualScroll(fixture, { height: 340 });
+
+    expect(viewports).toHaveLength(1);
+    const el = fixture.nativeElement as HTMLElement;
+    const buttons = el.querySelectorAll('.phase-task-list button.process-item');
+    expect(buttons.length).toBeGreaterThan(0);
+    expect(buttons.length).toBeLessThan(manyTasks.length);
+
+    const firstBtn = el.querySelector('button.process-item[aria-label="Abrir tarefa Atividade 01"]') as HTMLButtonElement | null;
+    expect(firstBtn).not.toBeNull();
+    firstBtn?.click();
+    expect(router.navigate).toHaveBeenCalledWith(['/tarefas', 'task-1']);
+
+    await scrollVirtualViewport(fixture, viewports[0], 68 * 30);
+    expect(el.textContent).toContain('Atividade 35');
+
+    fixture.componentInstance.search.set('Atividade 44');
+    await flushVirtualScroll(fixture, { height: 340 });
+    const filteredButtons = el.querySelectorAll('.phase-task-list button.process-item');
+    expect(filteredButtons).toHaveLength(1);
+    expect(filteredButtons[0].textContent).toContain('Atividade 44');
+    fixture.destroy();
   });
 });

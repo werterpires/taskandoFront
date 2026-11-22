@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import {
   AfterViewInit,
+  ChangeDetectionStrategy,
   Component,
   ElementRef,
   EventEmitter,
@@ -201,6 +202,7 @@ export function layoutDependencyGraph(graph: DependencyGraph, containerType: 'pr
 @Component({
   selector: 'app-dependency-graph',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule],
   templateUrl: './dependency-graph.component.html',
   styleUrl: './dependency-graph.component.css',
@@ -281,7 +283,7 @@ export class DependencyGraphComponent implements AfterViewInit, OnChanges, OnDes
     released: '→',
   };
 
-  private readonly onWindowResize = () => this.measureViewport();
+  private readonly onWindowResize = () => this.zone.run(() => this.measureViewport());
 
   ngOnChanges(): void {
     this.currentGraph.set(this.normalizedGraph(this.graph));
