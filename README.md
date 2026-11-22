@@ -47,6 +47,8 @@ Contextos identificados pelo backend têm rotas próprias:
 | Departamento | `#/estrutura/departamento/:id` |
 | Time | `#/estrutura/time/:id` |
 | Detalhe de processo | `#/processos/:id` |
+| Termos de Uso (público) | `#/termos` |
+| Política de Privacidade (público) | `#/privacidade` |
 
 Listas, organizações, departamentos e times recuperam seus metadados pela API ao abrir a rota, sem depender dos dados já carregados no menu; isso também preserva a identificação de listas vazias. Ao trocar de rota, respostas assíncronas pendentes da visão anterior são descartadas. Se um contexto dinâmico falhar, a URL permanece para permitir nova tentativa e o conteúdo antigo é removido. Na página de processo, a ação de voltar retorna para `#/processos`.
 
@@ -59,3 +61,8 @@ O grafo de dependências é compartilhado entre a página de processo e a visão
 ## Configurações e cota de convite único
 
 `AppComponent` (`src/app/app.component.ts` e `src/app/app.component.html`) armazena o signal `inviteQuota` a partir de `GET /api/auth/me` e `POST /api/auth/login` e o limpa no logout ou em HTTP `401`. Na seção `#/configuracoes`, o painel **Criar usuário** (`data-testid="create-user-panel"`) exibe a cota restante (`remaining de limit`) ou, quando esgotada (`remaining === 0`), oculta o formulário de criação e mostra os dados da pessoa convidada (`displayName`, `email` e `createdAt` formatado via `dateBr`). Após `POST /api/auth/users`, `refreshInviteQuota` atualiza imediatamente a cota via `auth/me`, mantendo um fallback local consistente em caso de falha transitória.
+
+## Documentos legais e gate de aceite (LGPD)
+
+- **Rotas públicas (`src/app/legal/legal-document.component.ts`)**: `#/termos` e `#/privacidade` renderizam os documentos vigentes carregados de `GET /api/legal/documents` via `LegalMarkdownComponent`, com links na tela de login (`data-testid="login-legal-links"`), em **Configurações → Seu perfil** (`data-testid="settings-legal-links"`) e no rodapé (`data-testid="footer-legal-links"`). Quando não há usuário autenticado, `AppComponent` exibe o shell público sem exigir sessão.
+- **Gate bloqueante e recuperação HTTP 428 (`LegalGateService` + `TermsAcceptanceModalComponent`)**: `AppComponent` sincroniza `legalStatus` em `auth/me` e `auth/login`, retendo o `bootstrap()` até a aceitação quando `requiresAcceptance === true`. Além disso, `ApiService.request` (`src/app/api.service.ts`) intercepta respostas HTTP `428` com `code === 'LEGAL_ACCEPTANCE_REQUIRED'` via `legalGate.intercept428(details)`, abrindo `app-terms-acceptance-modal` para confirmação via `POST /api/legal/accept` (`channel: 'web'`, com suporte a atualização de versão em HTTP `409` e opção de sair). Após o aceite, `AppComponent.onLegalAccepted()` executa `legalGate.notifyRecovered()` para retomar o `bootstrap()` ou recarregar o shell e as visões standalone (`ProcessViewComponent`, `PhaseViewComponent` e `TaskViewComponent`).
