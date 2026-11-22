@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
@@ -7,6 +7,7 @@ import { ApiError, ApiService, Item } from '../api.service';
 import { DrawerService } from '../shared/drawer.service';
 import { BreadcrumbCrumb, entityBreadcrumbs } from '../shared/breadcrumb';
 import { DateBrPipe } from '../shared/date-br.pipe';
+import { LegalGateService } from '../legal/legal-gate.service';
 
 type LoadState = 'loading' | 'ready' | 'forbidden' | 'not-found' | 'temporary-error';
 
@@ -42,6 +43,7 @@ export class TaskViewComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly drawer = inject(DrawerService);
+  private readonly legalGate = inject(LegalGateService);
   private routeSubscription?: Subscription;
   private requestVersion = 0;
   taskId = '';
@@ -90,6 +92,19 @@ export class TaskViewComponent implements OnInit, OnDestroy {
   newCommentText = '';
   newChecklistText = '';
   newSubtaskTitle = '';
+
+  constructor() {
+    effect(() => {
+      const recovered = this.legalGate.recovered();
+      if (recovered > 0) {
+        untracked(() => {
+          if (this.taskId) {
+            void this.load();
+          }
+        });
+      }
+    });
+  }
 
   ngOnInit(): void {
     this.routeSubscription = this.route.paramMap.subscribe(params => {

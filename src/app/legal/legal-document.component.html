@@ -1,0 +1,43 @@
+<div class="page legal-page">
+  <div class="legal-topbar">
+    <button type="button" class="process-back" (click)="goBack()">← Voltar ao Taskando</button>
+    <nav class="legal-doc-switch" aria-label="Documentos legais">
+      <a
+        href="#/termos"
+        [class.chosen]="documentType() === 'terms'"
+        (click)="switchDocument($event, 'terms')"
+      >Termos de Uso</a>
+      <a
+        href="#/privacidade"
+        [class.chosen]="documentType() === 'privacy'"
+        (click)="switchDocument($event, 'privacy')"
+      >Política de Privacidade</a>
+    </nav>
+  </div>
+
+  @if (loading()) {
+    <section class="surface process-state" role="status">
+      <p>Carregando documento legal…</p>
+    </section>
+  } @else if (error()) {
+    <section class="surface process-state" role="alert">
+      <h2>Não foi possível carregar o documento</h2>
+      <p>{{ error() }}</p>
+      <button type="button" class="primary" (click)="loadDocuments()">Tentar novamente</button>
+    </section>
+  } @else if (activeDocument(); as doc) {
+    <article class="surface legal-document-card" data-testid="legal-document-card">
+      <header class="legal-document-header">
+        <div>
+          <p class="eyebrow">DOCUMENTO LEGAL · TASKANDO</p>
+          <h1>{{ doc.title }}</h1>
+        </div>
+        <span class="badge" data-testid="legal-document-version">Versão {{ doc.version }}</span>
+      </header>
+      <div class="legal-document-body">
+        <app-legal-markdown [content]="doc.content" />
+      </div>
+    </article>
+  }
+</div>
+

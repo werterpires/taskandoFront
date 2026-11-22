@@ -9,6 +9,7 @@ import { PhaseViewComponent } from './app/phase-view/phase-view.component';
 import { ProcessViewComponent } from './app/process-view/process-view.component';
 import { TaskViewComponent } from './app/task-view/task-view.component';
 import { SectionRouteComponent } from './app/section-route.component';
+import { LegalDocumentComponent } from './app/legal/legal-document.component';
 import { navigation } from './app/navigation';
 
 registerLocaleData(localePt);
@@ -19,6 +20,8 @@ bootstrapApplication(AppComponent, {
     { provide: LOCALE_ID, useValue: 'pt-BR' },
     provideRouter([
       { path: '', pathMatch: 'full', redirectTo: 'inicio' },
+      { path: 'termos', component: LegalDocumentComponent, data: { documentType: 'terms' } },
+      { path: 'privacidade', component: LegalDocumentComponent, data: { documentType: 'privacy' } },
       ...navigation.map(item => ({ path: item.path, component: SectionRouteComponent })),
       { path: 'listas/:id', component: SectionRouteComponent },
       { path: 'estrutura/organizacao/:id', component: SectionRouteComponent },

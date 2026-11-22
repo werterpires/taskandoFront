@@ -12,6 +12,8 @@ import { DependencyGraph, DependencyGraphComponent, EMPTY_DEPENDENCY_GRAPH } fro
 import { DrawerService } from './shared/drawer.service';
 import { BreadcrumbCrumb, entityBreadcrumbs } from './shared/breadcrumb';
 import { DateBrPipe } from './shared/date-br.pipe';
+import { LegalGateService } from './legal/legal-gate.service';
+import { TermsAcceptanceModalComponent } from './legal/terms-acceptance-modal.component';
 
 export type InviteQuotaUser = {
   id: string;
@@ -27,11 +29,13 @@ export type InviteQuota = {
 };
 
 const paths: Record<string, string> = { task: 'tasks', project: 'projects', front: 'fronts', product: 'products', process: 'processes', phase: 'phases', organization: 'organizations', list: 'lists', reminder: 'reminders', series: 'recurrence-series' };
-@Component({ selector: 'app-root', standalone: true, imports: [CommonModule, FormsModule, RouterOutlet, DependencyGraphComponent, DateBrPipe], templateUrl: './app.component.html' })
+@Component({ selector: 'app-root', standalone: true, imports: [CommonModule, FormsModule, RouterOutlet, DependencyGraphComponent, DateBrPipe, TermsAcceptanceModalComponent], templateUrl: './app.component.html' })
 export class AppComponent implements OnInit, OnDestroy {
   api = inject(ApiService);
   router = inject(Router);
   drawer = inject(DrawerService);
+  legalGate = inject(LegalGateService);
+  private bootstrapped = false;
   user = signal<Item | null>(null); inviteQuota = signal<InviteQuota | null>(null); authenticating = signal(true); loading = signal(false); saving = signal(false);
   error = signal(''); notice = signal(''); section = signal('Início'); mobile = signal(false);
   loginEmail = ''; loginPassword = '';
@@ -161,7 +165,15 @@ export class AppComponent implements OnInit, OnDestroy {
     this.routeSubscription = this.router.events.pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd)).subscribe(() => {
       if (this.user()) void this.applyRoute();
     });
-    try { const data = await this.api.request('auth/me'); this.user.set(data.user); this.inviteQuota.set(data.inviteQuota ?? null); await this.bootstrap(); }
+    try {
+      const data = await this.api.request('auth/me');
+      this.user.set(data.user);
+      this.inviteQuota.set(data.inviteQuota ?? null);
+      this.legalGate.syncStatus(data.legalStatus);
+      if (!this.legalGate.requiresAcceptance()) {
+        await this.bootstrap();
+      }
+    }
     catch (e) { if (!(e instanceof ApiError && e.status === 401)) this.fail(e); }
     finally { this.authenticating.set(false); }
   }
@@ -170,7 +182,9 @@ export class AppComponent implements OnInit, OnDestroy {
     const initialSection = this.currentRoute()?.section;
     await this.reloadNavigation(initialSection !== 'Minhas tarefas');
     if (!this.isStandaloneRoute()) await this.applyRoute();
-    await this.poll(); if (this.user()) this.timer = setInterval(() => void this.poll(), 30_000);
+    await this.poll();
+    this.bootstrapped = true;
+    if (this.user() && !this.timer) this.timer = setInterval(() => void this.poll(), 30_000);
   }
   async reloadNavigation(includeTasks = true) {
     const [orgs, lists, taskData] = await Promise.all([this.api.request('organizations'),this.api.request('lists'),includeTasks ? this.api.request('tasks') : Promise.resolve(null)]);
@@ -189,7 +203,19 @@ export class AppComponent implements OnInit, OnDestroy {
     ]);
     if (version !== this.notificationRequestVersion) return;
     if ([unread, reminders, all].some(result => result.status === 'rejected' && result.reason instanceof ApiError && result.reason.status === 401)) {
-      this.user.set(null); this.inviteQuota.set(null); this.ngOnDestroy(); return;
+      this.user.set(null); this.inviteQuota.set(null); this.bootstrapped = false; this.legalGate.clear(); this.ngOnDestroy(); return;
+    }
+    const rejected428 = [unread, reminders, all].find(
+      (result): result is PromiseRejectedResult =>
+        result.status === 'rejected' &&
+        result.reason instanceof ApiError &&
+        result.reason.status === 428 &&
+        result.reason.details['code'] === 'LEGAL_ACCEPTANCE_REQUIRED',
+    );
+    if (rejected428) {
+      this.legalGate.intercept428(rejected428.reason.details);
+      this.notificationsLoading.set(false);
+      return;
     }
     if (!this.user() || version !== this.notificationRequestVersion) return;
     this.notificationsLoading.set(false);
@@ -207,10 +233,41 @@ export class AppComponent implements OnInit, OnDestroy {
       : [fixedRoute(section)];
     await this.router.navigate(route);
   }
+  private routeSegments(): string[] {
+    return this.router.parseUrl(this.router.url).root.children['primary']?.segments.map(segment => segment.path) ?? [];
+  }
+  isPublicLegalRoute(): boolean {
+    const segments = this.routeSegments();
+    return segments.length === 1 && (segments[0] === 'termos' || segments[0] === 'privacidade');
+  }
+  openLegalRoute(event: Event, path: '/termos' | '/privacidade') {
+    event.preventDefault();
+    this.mobile.set(false);
+    void this.router.navigate([path]);
+  }
+  async onLegalAccepted() {
+    this.error.set('');
+    this.notificationsError.set('');
+    this.legalGate.notifyRecovered();
+    if (!this.user()) return;
+    try {
+      if (!this.bootstrapped) {
+        await this.bootstrap();
+        return;
+      }
+      const currentSection = this.currentRoute()?.section;
+      await this.reloadNavigation(currentSection !== 'Minhas tarefas');
+      if (!this.isStandaloneRoute()) await this.applyRoute();
+      await this.poll();
+    } catch (e) {
+      this.fail(e);
+    }
+  }
   private currentRoute(): { section: string | null; scope: RouteScope | null } | null {
-    const segments = this.router.parseUrl(this.router.url).root.children['primary']?.segments.map(segment => segment.path) ?? [];
+    const segments = this.routeSegments();
     const standaloneSegments = ['processos', 'fases', 'phases', 'tarefas', 'tasks'];
     if (standaloneSegments.includes(segments[0]) && segments.length === 2) return null;
+    if (this.isPublicLegalRoute()) return null;
     return { section: sectionForRoute(segments), scope: routeScope(segments) };
   }
   private async applyRoute() {
@@ -273,23 +330,36 @@ export class AppComponent implements OnInit, OnDestroy {
   isProcessRoute() { return this.router.url.startsWith('/processos/'); }
   isStandaloneRoute(): boolean {
     const url = this.router.url;
-    return url.startsWith('/processos/') || url.startsWith('/fases/') || url.startsWith('/phases/') || url.startsWith('/tarefas/') || url.startsWith('/tasks/');
+    return url.startsWith('/processos/') || url.startsWith('/fases/') || url.startsWith('/phases/') || url.startsWith('/tarefas/') || url.startsWith('/tasks/') || this.isPublicLegalRoute();
   }
   standaloneRouteTitle(): string {
     const url = this.router.url;
     if (url.startsWith('/processos/')) return 'Processo';
     if (url.startsWith('/fases/') || url.startsWith('/phases/')) return 'Fase';
     if (url.startsWith('/tarefas/') || url.startsWith('/tasks/')) return 'Tarefa';
+    if (this.routeSegments()[0] === 'termos') return 'Termos de Uso';
+    if (this.routeSegments()[0] === 'privacidade') return 'Política de Privacidade';
     return '';
   }
   mark(rows: Item[] | undefined, kind:string):Item[] { return (rows ?? []).map(row=>({...row,kind})); }
   contextRows(data: Record<string,any>) { return ['organizations','departments','teams','projects','products','processes','tasks'].flatMap(key=>this.mark(data[key],({organizations:'organization',departments:'department',teams:'team',projects:'project',products:'product',processes:'process',tasks:'task'} as Record<string,string>)[key])); }
-  fail(e:unknown) { this.error.set(e instanceof Error ? e.message : 'Não foi possível concluir a operação.'); }
+  fail(e:unknown) {
+    if (e instanceof ApiError && e.status === 428 && e.details['code'] === 'LEGAL_ACCEPTANCE_REQUIRED') {
+      this.legalGate.intercept428(e.details);
+      this.error.set('');
+      return;
+    }
+    this.error.set(e instanceof Error ? e.message : 'Não foi possível concluir a operação.');
+  }
   async run(action:()=>Promise<void>) { if(this.saving()) return; this.saving.set(true);this.error.set('');try { await action(); } catch(e) { this.fail(e); } finally { this.saving.set(false); } }
   async runNotification(action:()=>Promise<void>) { await this.run(action); if(this.error()) this.notificationsError.set(this.error()); }
   async authenticate() { await this.run(async()=>{
     const data=await this.api.request('auth/login','POST',{email:this.loginEmail,password:this.loginPassword});
-    this.loginPassword='';this.showReadNotifications.set(false);this.unreadNotificationCount.set(0);this.notifications.set([]);this.notificationsError.set('');this.user.set(data.user);this.inviteQuota.set(data.inviteQuota ?? null);await this.bootstrap();
+    this.loginPassword='';this.showReadNotifications.set(false);this.unreadNotificationCount.set(0);this.notifications.set([]);this.notificationsError.set('');this.user.set(data.user);this.inviteQuota.set(data.inviteQuota ?? null);
+    this.legalGate.syncStatus(data.legalStatus);
+    if (!this.legalGate.requiresAcceptance()) {
+      await this.bootstrap();
+    }
   }); }
   async createUser() { await this.run(async()=>{
     const created=await this.api.request('auth/users','POST',{displayName:this.newUserDisplayName,email:this.newUserEmail,password:this.newUserPassword});
@@ -329,7 +399,7 @@ export class AppComponent implements OnInit, OnDestroy {
     await this.api.request('auth/password','PATCH',{currentPassword:this.currentPassword,newPassword:this.newPassword});
     this.currentPassword='';this.newPassword='';this.notice.set('Senha alterada.');
   }); }
-  async logout() { await this.run(async()=>{await this.api.request('auth/logout','POST',{});this.user.set(null);this.inviteQuota.set(null);this.showReadNotifications.set(false);this.ngOnDestroy();}); }
+  async logout() { await this.run(async()=>{await this.api.request('auth/logout','POST',{});this.user.set(null);this.inviteQuota.set(null);this.bootstrapped = false;this.legalGate.clear();this.showReadNotifications.set(false);this.ngOnDestroy();}); }
   localDate(date:Date) { return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`; }
   title(row:Item) { return row.title ?? row.name ?? ''; }
   parentChainLabel(row:Item) { return (row['parentChain'] ?? []).map((parent:Item) => this.title(parent)).filter(Boolean).join(' → '); }

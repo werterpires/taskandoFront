@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../environments/environment';
+import { LegalGateService } from './legal/legal-gate.service';
 export type Item = { id: string; title?: string; name?: string; kind?: string; [key: string]: any };
 export const closedWorkStates = ['completed', 'cancelled', 'archived'] as const;
 export type ClosedWorkState = typeof closedWorkStates[number];
@@ -19,6 +20,7 @@ export class ApiError extends Error {
 @Injectable({ providedIn: 'root' })
 export class ApiService {
   private http = inject(HttpClient);
+  private legalGate = inject(LegalGateService, { optional: true });
   async request<T = any>(path: string, method = 'GET', body?: unknown): Promise<T> {
     try { return await firstValueFrom(this.http.request<T>(method, `${environment.apiBaseUrl}/api/${path}`, { body, withCredentials: true })); }
     catch (error) {
@@ -26,7 +28,11 @@ export class ApiService {
         if (error.error instanceof SyntaxError || typeof error.error === 'string') {
           throw new ApiError(error.status || 0, { error: 'Não foi possível conectar à API. Inicie o backend Nest e confirme o proxy do Angular.' });
         }
-        throw new ApiError(error.status, typeof error.error === 'object' && error.error ? error.error : {});
+        const details = typeof error.error === 'object' && error.error ? error.error : {};
+        if (error.status === 428 && details['code'] === 'LEGAL_ACCEPTANCE_REQUIRED') {
+          this.legalGate?.intercept428(details);
+        }
+        throw new ApiError(error.status, details);
       }
       throw error;
     }

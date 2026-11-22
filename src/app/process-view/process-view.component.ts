@@ -8,6 +8,7 @@ import { DependencyGraph, DependencyGraphComponent } from '../shared/dependency-
 import { DrawerService } from '../shared/drawer.service';
 import { BreadcrumbCrumb, entityBreadcrumbs } from '../shared/breadcrumb';
 import { DateBrPipe } from '../shared/date-br.pipe';
+import { LegalGateService } from '../legal/legal-gate.service';
 
 type LoadState = 'loading' | 'ready' | 'forbidden' | 'not-found' | 'temporary-error';
 type Progress = { percentage: number; completed: number; total: number; excluded: number; visible: number };
@@ -23,6 +24,7 @@ export class ProcessViewComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly drawer = inject(DrawerService);
+  private readonly legalGate = inject(LegalGateService);
   private routeSubscription?: Subscription;
   private requestVersion = 0;
   private processId = '';
@@ -90,6 +92,16 @@ export class ProcessViewComponent implements OnInit, OnDestroy {
       if (refresh > 0) {
         untracked(() => {
           if (this.processId && this.state() === 'ready') {
+            void this.load();
+          }
+        });
+      }
+    });
+    effect(() => {
+      const recovered = this.legalGate.recovered();
+      if (recovered > 0) {
+        untracked(() => {
+          if (this.processId) {
             void this.load();
           }
         });

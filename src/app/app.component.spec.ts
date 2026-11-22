@@ -414,3 +414,262 @@ describe('AppComponent inviteQuota in Settings', () => {
   });
 });
 
+describe('AppComponent legal routes, blocking gate, and 428 recovery', () => {
+  const PENDING_LEGAL_STATUS = {
+    requiresAcceptance: true,
+    activeVersions: { terms: '1.0', privacy: '1.0' },
+    acceptedVersions: { terms: null, privacy: null },
+    pendingDocuments: ['terms', 'privacy'],
+  };
+  const ACCEPTED_LEGAL_STATUS = {
+    requiresAcceptance: false,
+    activeVersions: { terms: '1.0', privacy: '1.0' },
+    acceptedVersions: { terms: '1.0', privacy: '1.0' },
+    pendingDocuments: [],
+  };
+  const LEGAL_DOCS = {
+    activeVersions: { terms: '1.0', privacy: '1.0' },
+    documents: [
+      { type: 'terms', title: 'Termos de Uso — Taskando', version: '1.0', content: '# Termos de Uso\n\nConteúdo dos termos.' },
+      { type: 'privacy', title: 'Política de Privacidade — Taskando', version: '1.0', content: '# Política de Privacidade\n\nConteúdo da privacidade.' },
+    ],
+  };
+
+  async function flushMicrotasks() {
+    await new Promise(resolve => setTimeout(resolve, 0));
+  }
+
+  function createLegalRouter(initialUrl = '/minhas-tarefas') {
+    const events = new Subject<unknown>();
+    let url = initialUrl;
+    return {
+      events,
+      get url() { return url; },
+      parseUrl: vi.fn(() => ({ root: { children: { primary: { segments: url.split('/').filter(Boolean).map(path => ({ path })) } } } })),
+      navigate: vi.fn(async (commands: string[]) => {
+        url = commands[0].startsWith('/') ? commands.join('/') : `/${commands.join('/')}`;
+        events.next(new NavigationEnd(1, url, url));
+        return true;
+      }),
+    };
+  }
+
+  it('renders public legal links in login card, footer, and Settings profile card and exposes public router-outlet on #/termos', async () => {
+    const router = createLegalRouter('/configuracoes');
+    let authenticated = false;
+    const api = {
+      request: vi.fn(async (path: string) => {
+        if (path === 'auth/me') {
+          if (!authenticated) throw new ApiError(401, { error: 'Não autenticado.' });
+          return {
+            user: { id: 'u-1', displayName: 'Pessoa', email: 'pessoa@example.test' },
+            legalStatus: ACCEPTED_LEGAL_STATUS,
+          };
+        }
+        if (path === 'organizations') return { organizations: [], invitations: [] };
+        if (path === 'lists') return { lists: [] };
+        if (path === 'tasks') return { tasks: [] };
+        if (path === 'notifications?unreadOnly=1') return { unreadCount: 0, notifications: [] };
+        if (path === 'reminders/due') return { reminders: [] };
+        if (path === 'notification-preferences') return { preferences: {} };
+        if (path === 'preferences/size-labels') return { labels: ['PP', 'P', 'M', 'G', 'GG'] };
+        if (path === 'mcp-token') return { hasToken: false };
+        if (path === 'owner-transfers') return { requests: [] };
+        if (path === 'item-invitations') return { invitations: [] };
+        throw new Error(`Unexpected request: ${path}`);
+      }),
+      requestWithClosed: vi.fn(async () => ({ tasks: [] })),
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [AppComponent],
+      providers: [{ provide: ApiService, useValue: api }, { provide: Router, useValue: router }],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(AppComponent);
+    const component = fixture.componentInstance;
+    await component.ngOnInit();
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const loginLinks = el.querySelector('[data-testid="login-legal-links"]');
+    expect(loginLinks?.querySelectorAll('a').length).toBe(2);
+    expect(loginLinks?.textContent).toContain('Termos de Uso');
+    expect(loginLinks?.textContent).toContain('Política de Privacidade');
+
+    const firstLoginLink = loginLinks?.querySelector('a') as HTMLAnchorElement;
+    firstLoginLink.click();
+    fixture.detectChanges();
+    expect(router.navigate).toHaveBeenCalledWith(['/termos']);
+    expect(component.isPublicLegalRoute()).toBe(true);
+    expect(el.querySelector('.public-legal-shell')).toBeTruthy();
+
+    await router.navigate(['/configuracoes']);
+    authenticated = true;
+    await component.ngOnInit();
+    fixture.detectChanges();
+
+    const profileLinks = el.querySelector('[data-testid="settings-profile-card"] [data-testid="settings-legal-links"]');
+    const footerLinks = el.querySelector('[data-testid="footer-legal-links"]');
+    expect(profileLinks?.textContent).toContain('Termos de Uso');
+    expect(profileLinks?.textContent).toContain('Política de Privacidade');
+    expect(footerLinks?.textContent).toContain('Termos de Uso');
+    expect(footerLinks?.textContent).toContain('Política de Privacidade');
+    fixture.destroy();
+  });
+
+  it('shows blocking acceptance modal on session restore when requiresAcceptance is true and bootstraps after acceptance', async () => {
+    const router = createLegalRouter('/minhas-tarefas');
+    let accepted = false;
+    const api = {
+      request: vi.fn(async (path: string, method = 'GET') => {
+        if (path === 'auth/me') {
+          return {
+            user: { id: 'u-1', displayName: 'Pessoa', email: 'pessoa@example.test' },
+            legalStatus: PENDING_LEGAL_STATUS,
+          };
+        }
+        if (path === 'legal/documents') return LEGAL_DOCS;
+        if (path === 'legal/accept' && method === 'POST') {
+          accepted = true;
+          return { legalStatus: ACCEPTED_LEGAL_STATUS };
+        }
+        if (!accepted) {
+          throw new Error(`Domain endpoint called before acceptance: ${path}`);
+        }
+        if (path === 'organizations') return { organizations: [], invitations: [] };
+        if (path === 'lists') return { lists: [] };
+        if (path === 'notifications?unreadOnly=1') return { unreadCount: 0, notifications: [] };
+        if (path === 'reminders/due') return { reminders: [] };
+        throw new Error(`Unexpected request: ${method} ${path}`);
+      }),
+      requestWithClosed: vi.fn(async (path: string) => {
+        if (!accepted) throw new Error(`Domain endpoint called before acceptance: ${path}`);
+        return { tasks: [{ id: 't-1', title: 'Tarefa após aceite', status: 'todo' }] };
+      }),
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [AppComponent],
+      providers: [{ provide: ApiService, useValue: api }, { provide: Router, useValue: router }],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(AppComponent);
+    const component = fixture.componentInstance;
+    await component.ngOnInit();
+    fixture.detectChanges();
+    await flushMicrotasks();
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('[data-testid="legal-acceptance-modal"]')).toBeTruthy();
+    expect(api.requestWithClosed).not.toHaveBeenCalled();
+
+    const checkbox = el.querySelector('[data-testid="legal-acceptance-checkbox"]') as HTMLInputElement;
+    checkbox.checked = true;
+    checkbox.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+
+    const submit = el.querySelector('[data-testid="legal-acceptance-submit"]') as HTMLButtonElement;
+    submit.click();
+    await flushMicrotasks();
+    await flushMicrotasks();
+    fixture.detectChanges();
+
+    expect(api.request).toHaveBeenCalledWith('legal/accept', 'POST', {
+      documents: [
+        { documentType: 'terms', version: '1.0' },
+        { documentType: 'privacy', version: '1.0' },
+      ],
+      channel: 'web',
+    });
+    expect(el.querySelector('[data-testid="legal-acceptance-modal"]')).toBeNull();
+    expect(api.requestWithClosed).toHaveBeenCalledWith('tasks', []);
+    expect(component.tasks().some(t => t.id === 't-1')).toBe(true);
+    fixture.destroy();
+  });
+
+  it('recovers from mid-session HTTP 428 LEGAL_ACCEPTANCE_REQUIRED after accepting terms', async () => {
+    const router = createLegalRouter('/minhas-tarefas');
+    let legalGateBlocked = false;
+    let tasksRequests = 0;
+
+    const api = {
+      request: vi.fn(async (path: string, method = 'GET') => {
+        if (path === 'auth/me') {
+          return {
+            user: { id: 'u-1', displayName: 'Pessoa', email: 'pessoa@example.test' },
+            legalStatus: ACCEPTED_LEGAL_STATUS,
+          };
+        }
+        if (path === 'organizations') return { organizations: [], invitations: [] };
+        if (path === 'lists') return { lists: [] };
+        if (path === 'notifications?unreadOnly=1') return { unreadCount: 0, notifications: [] };
+        if (path === 'reminders/due') return { reminders: [] };
+        if (path === 'legal/documents') return LEGAL_DOCS;
+        if (path === 'legal/accept' && method === 'POST') {
+          legalGateBlocked = false;
+          return { legalStatus: ACCEPTED_LEGAL_STATUS };
+        }
+        throw new Error(`Unexpected request: ${method} ${path}`);
+      }),
+      requestWithClosed: vi.fn(async (path: string) => {
+        if (path === 'tasks') {
+          tasksRequests += 1;
+          if (legalGateBlocked) {
+            throw new ApiError(428, {
+              error: 'É necessário aceitar os Termos de Uso e a Política de Privacidade vigentes para continuar.',
+              code: 'LEGAL_ACCEPTANCE_REQUIRED',
+              legalStatus: PENDING_LEGAL_STATUS,
+            });
+          }
+          return { tasks: [{ id: 't-recovered', title: 'Recuperada após 428', status: 'todo' }] };
+        }
+        throw new Error(`Unexpected requestWithClosed: ${path}`);
+      }),
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [AppComponent],
+      providers: [{ provide: ApiService, useValue: api }, { provide: Router, useValue: router }],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(AppComponent);
+    const component = fixture.componentInstance;
+    fixture.detectChanges();
+    await flushMicrotasks();
+    await flushMicrotasks();
+    fixture.detectChanges();
+    expect(tasksRequests).toBe(1);
+
+    legalGateBlocked = true;
+    await component.load();
+    fixture.detectChanges();
+    await flushMicrotasks();
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(component.legalGate.requiresAcceptance()).toBe(true);
+    expect(component.error()).toBe('');
+    expect(el.querySelector('[data-testid="legal-acceptance-modal"]')).toBeTruthy();
+
+    const checkbox = el.querySelector('[data-testid="legal-acceptance-checkbox"]') as HTMLInputElement;
+    checkbox.checked = true;
+    checkbox.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+
+    const submit = el.querySelector('[data-testid="legal-acceptance-submit"]') as HTMLButtonElement;
+    submit.click();
+    await flushMicrotasks();
+    await flushMicrotasks();
+    fixture.detectChanges();
+
+    expect(component.legalGate.requiresAcceptance()).toBe(false);
+    expect(el.querySelector('[data-testid="legal-acceptance-modal"]')).toBeNull();
+    expect(tasksRequests).toBe(3);
+    expect(component.tasks().some(t => t.id === 't-recovered')).toBe(true);
+    fixture.destroy();
+  });
+});
+
+

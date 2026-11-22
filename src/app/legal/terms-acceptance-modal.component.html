@@ -1,0 +1,94 @@
+<div class="modal-backdrop legal-gate-backdrop" data-testid="legal-acceptance-backdrop"></div>
+<section
+  class="modal legal-gate-modal"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="legal-gate-title"
+  data-testid="legal-acceptance-modal"
+>
+  <header class="legal-gate-header">
+    <div>
+      <p class="eyebrow">CONFORMIDADE E PRIVACIDADE</p>
+      <h2 id="legal-gate-title">Aceite dos Termos de Uso e Privacidade</h2>
+      <p class="muted">
+        Para continuar usando o Taskando, leia os documentos vigentes abaixo e confirme o aceite.
+      </p>
+    </div>
+  </header>
+
+  @if (loading()) {
+    <div class="legal-gate-status" role="status">Carregando documentos legais…</div>
+  } @else if (loadError()) {
+    <div class="error" role="alert">
+      <span>{{ loadError() }}</span>
+      <button type="button" (click)="loadDocuments()">Tentar novamente</button>
+    </div>
+  } @else {
+    <div class="tabs legal-tabs" role="tablist" aria-label="Documentos legais para aceite">
+      @for (doc of documents(); track doc.type) {
+        <button
+          type="button"
+          role="tab"
+          [attr.aria-selected]="activeDocument()?.type === doc.type"
+          [class.chosen]="activeDocument()?.type === doc.type"
+          [attr.data-testid]="'legal-tab-' + doc.type"
+          (click)="selectTab(doc.type)"
+        >
+          <span>{{ tabLabel(doc.type) }}</span>
+          <small>v{{ doc.version }}</small>
+          @if (isPending(doc.type)) {
+            <span class="badge legal-pending-badge">Pendente</span>
+          }
+        </button>
+      }
+    </div>
+
+    @if (activeDocument(); as doc) {
+      <div
+        class="legal-reading-box"
+        tabindex="0"
+        role="region"
+        [attr.aria-label]="doc.title"
+        data-testid="legal-acceptance-body"
+      >
+        <app-legal-markdown
+          [content]="doc.content"
+          [interceptDocumentLinks]="true"
+          (documentNavigate)="selectTab($event)"
+        />
+      </div>
+    }
+  }
+
+  @if (submitError()) {
+    <p class="error" role="alert" data-testid="legal-acceptance-error">{{ submitError() }}</p>
+  }
+
+  <label class="check-label legal-acceptance-check">
+    <input
+      type="checkbox"
+      [checked]="acceptedChecked()"
+      [disabled]="loading() || submitting() || !!loadError()"
+      data-testid="legal-acceptance-checkbox"
+      (change)="acceptedChecked.set($any($event.target).checked)"
+    >
+    <span>Li e concordo integralmente com os Termos de Uso e a Política de Privacidade vigentes.</span>
+  </label>
+
+  <footer class="form-footer legal-gate-footer">
+    <button
+      type="button"
+      [disabled]="submitting()"
+      data-testid="legal-acceptance-logout"
+      (click)="requestLogout()"
+    >Sair</button>
+    <button
+      type="button"
+      class="primary"
+      [disabled]="!canSubmit()"
+      data-testid="legal-acceptance-submit"
+      (click)="submitAcceptance()"
+    >{{ submitting() ? 'Registrando aceite…' : 'Aceitar e continuar' }}</button>
+  </footer>
+</section>
+
